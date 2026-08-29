@@ -140,6 +140,7 @@ class RoboEyes:
         self.laugh_toggle = True
 
         self.on_move = None  # optional callback(x, y) invoked whenever a NEW eye target is set
+        self.on_blink = None  # optional callback() invoked whenever a blink occurs
 
     # General Setup
     def begin(self):
@@ -291,10 +292,13 @@ class RoboEyes:
             self.eyeL_open = True
         if right:
             self.eyeR_open = True
+        
 
     def blink(self, left=True, right=True):
         self.close(left, right)
         self.open_eyes(left, right)
+        if self.on_blink:
+            self.on_blink()
 
     # Macro Animation Methods
     def anim_confused(self):

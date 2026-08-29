@@ -19,7 +19,9 @@ def main():
     mood_change = pygame.mixer.Sound("sounds/focus_7.wav")
     mood_change.set_volume(0.5)
     movement = pygame.mixer.Sound("sounds/focus_12.wav")
-    movement.set_volume(0.5)
+    movement.set_volume(0.25)
+    blink = pygame.mixer.Sound("sounds/shutter_dial.wav")
+    blink.set_volume(0.25)
 
     # Screen settings
     screen_width = 1024   # Rotated width
@@ -48,6 +50,7 @@ def main():
     robo_eyes.setBorderradius(40, 40)
     robo_eyes.setBottomPadding(140)  # Set bottom padding for toast notifications
     robo_eyes.on_move = lambda x, y: movement.play()
+    robo_eyes.on_blink = lambda: blink.play()
     mood_state = state.MoodState(robo_eyes=robo_eyes, initial=base_mood)
 
     attention = a.AttentionController(robo_eyes)
