@@ -4,6 +4,7 @@ from datetime import datetime
 BAR_WIDTH = 280
 BAR_HEIGHT = 64
 ICON_SIZE = 40
+BAR_MARGIN = 24
 
 
 def _draw_icon(surface, condition, cx, cy):
@@ -46,5 +47,5 @@ def draw_status_bar(window, weather, screen_width, screen_height, time_font, tem
     bar.blit(temp_surface, (BAR_WIDTH - 40, (BAR_HEIGHT - temp_surface.get_height()) // 2))
 
     target_x = (screen_width - BAR_WIDTH) // 2
-    target_y = (screen_height - BAR_HEIGHT)
+    target_y = (screen_height - BAR_HEIGHT - BAR_MARGIN)
     window.blit(bar, (target_x, target_y))
