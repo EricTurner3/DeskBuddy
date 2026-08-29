@@ -1,4 +1,6 @@
 # attention.py
+from random import random
+
 import pygame
 
 # Maps a toast's on-screen corner to a fraction of the eyes' movement range.
@@ -20,6 +22,7 @@ class AttentionController:
     """
 
     BOUNCE_INTERVAL_MS = 900
+    BOUNCE_INTERVAL_VARIATION_MS = 300
 
     def __init__(self, robo_eyes):
         self.robo_eyes = robo_eyes
@@ -60,7 +63,7 @@ class AttentionController:
         if self.target_fraction is None:
             return
         now = pygame.time.get_ticks()
-        if now - self.bounce_timer >= self.BOUNCE_INTERVAL_MS:
+        if now - self.bounce_timer >= (self.BOUNCE_INTERVAL_MS + random.randint(0, self.BOUNCE_INTERVAL_VARIATION_MS)):
             self.looking_at_target = not self.looking_at_target
             self.bounce_timer = now
             self._apply()
