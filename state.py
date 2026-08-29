@@ -1,10 +1,10 @@
 import threading
 import sqlite3
-from helper import utc_now
+from helper import utc_now, next_due_at
 from dataclasses import dataclass, field
 import roboeyes as r
-
-import roboeyes as r
+import pygame
+from api import REMINDER_CREATED
 
 class MoodState:
     """Thread-safe mood state, shared between the API thread and the main loop.
@@ -63,19 +63,23 @@ class ReminderStore:
                     title TEXT NOT NULL,
                     due_at TEXT NOT NULL,
                     completed INTEGER NOT NULL DEFAULT 0,
-                    triggered INTEGER NOT NULL DEFAULT 0
+                    triggered INTEGER NOT NULL DEFAULT 0,
+                    recurrence_seconds INTEGER
                 )"""
             )
 
     def _connect(self):
         return sqlite3.connect(self.path, timeout=10)
 
-    def create(self, title, due_at):
+    def create(self, title, due_at, recurrence_seconds=None):
         with self.lock, self._connect() as connection:
-            print('+ Adding Reminder {} - due at {}'.format(title, due_at))
+            print('+ Adding Reminder {} - due at {}{}'.format(
+                title, due_at,
+                f' (recurring every {recurrence_seconds}s)' if recurrence_seconds else ''
+            ))
             cursor = connection.execute(
-                "INSERT INTO reminders (title, due_at) VALUES (?, ?)",
-                (title, due_at),
+                "INSERT INTO reminders (title, due_at, recurrence_seconds) VALUES (?, ?, ?)",
+                (title, due_at, recurrence_seconds),
             )
             reminder_id = cursor.lastrowid
         return self.get(reminder_id)
@@ -83,7 +87,7 @@ class ReminderStore:
     def get(self, reminder_id):
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT id, title, due_at, completed FROM reminders WHERE id = ?",
+                "SELECT id, title, due_at, completed, recurrence_seconds FROM reminders WHERE id = ?",
                 (reminder_id,),
             ).fetchone()
         return self._as_dict(row) if row else None
@@ -91,18 +95,45 @@ class ReminderStore:
     def list(self):
         with self._connect() as connection:
             rows = connection.execute(
-                "SELECT id, title, due_at, completed FROM reminders "
+                "SELECT id, title, due_at, completed, recurrence_seconds FROM reminders "
                 "WHERE completed = 0 ORDER BY due_at"
             ).fetchall()
         return [self._as_dict(row) for row in rows]
 
     def complete(self, reminder_id):
         with self.lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT title, due_at, recurrence_seconds FROM reminders WHERE id = ?",
+                (reminder_id,),
+            ).fetchone()
             connection.execute(
                 "UPDATE reminders SET completed = 1 WHERE id = ?",
                 (reminder_id,),
             )
-        return self.get(reminder_id)
+
+        completed_reminder = self.get(reminder_id)
+
+        if row is not None:
+            title, due_at, recurrence_seconds = row
+            if recurrence_seconds:
+                next_due = next_due_at(due_at, recurrence_seconds)
+                next_reminder = self.create(title, next_due, recurrence_seconds)
+                # Reuse the flash-toast pathway for recurring re-spawns,
+                # same as a fresh API-created reminder.
+                pygame.event.post(pygame.event.Event(REMINDER_CREATED, reminder=next_reminder))
+
+        return completed_reminder
+
+    def delete(self, reminder_id):
+        """Delete a not-yet-completed reminder. For a recurring reminder, this
+        cancels the whole series, since no future occurrence exists until this
+        one completes."""
+        with self.lock, self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM reminders WHERE id = ? AND completed = 0",
+                (reminder_id,),
+            )
+        return cursor.rowcount > 0
 
     def due(self):
         now = utc_now().isoformat()
@@ -125,6 +156,7 @@ class ReminderStore:
             "title": row[1],
             "due_at": row[2],
             "completed": bool(row[3]),
+            "recurrence_seconds": row[4],
         }
 
 

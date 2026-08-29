@@ -29,13 +29,16 @@ class Router:
     """
 
     def __init__(self):
-        self.routes = {"GET": [], "POST": []}
+        self.routes = {"GET": [], "POST": [], "DELETE": []}
 
     def get(self, path):
         return self._register("GET", path)
 
     def post(self, path):
         return self._register("POST", path)
+    
+    def delete(self, path):
+        return self._register("DELETE", path)
 
     def _register(self, method, path):
         pattern = self._compile(path)
@@ -93,6 +96,9 @@ class APIHandler(BaseHTTPRequestHandler):
         print('* Received request: {}'.format(self))
         self._dispatch("POST")
 
+    def do_DELETE(self):
+        self._dispatch("DELETE")
+
     def _dispatch(self, method):
         path = urlparse(self.path).path
         func, params = router.match(method, path)
@@ -114,9 +120,10 @@ def list_reminders(handler):
 
 
 '''
-    expects a JSON payload with either "delay_seconds" or "due_at" (ISO 8601 format) to create a new reminder.
-    {"title": "Example Reminder", "delay_seconds": 3600}
-    {"title": "Example Reminder", "due_at": "2024-06-01T12:00:00Z"}
+    expects a JSON payload with either "delay_seconds" or "due_at" (ISO 8601 format).
+    optional "recurrence_seconds": if set, a new reminder is auto-created at
+    (this reminder's due_at + recurrence_seconds) each time this one is completed.
+    {"title": "Drink water", "delay_seconds": 3600, "recurrence_seconds": 3600}
 '''
 @router.post("/reminders")
 def create_reminder(handler):
@@ -128,9 +135,23 @@ def create_reminder(handler):
         due_at = (utc_now() + timedelta(seconds=float(payload["delay_seconds"]))).isoformat()
     else:
         due_at = parse_due_at(payload.get("due_at"))
-    reminder = handler.store.create(title, due_at)
+    recurrence_seconds = payload.get("recurrence_seconds")
+    if recurrence_seconds is not None:
+        recurrence_seconds = int(recurrence_seconds)
+        if recurrence_seconds <= 0:
+            raise ValueError("recurrence_seconds must be positive")
+    reminder = handler.store.create(title, due_at, recurrence_seconds)
     pygame.event.post(pygame.event.Event(REMINDER_CREATED, reminder=reminder))
     handler._send_json(201, reminder)
+
+
+@router.delete("/reminders/{reminder_id}")
+def delete_reminder(handler, reminder_id):
+    deleted = handler.store.delete(int(reminder_id))
+    if deleted:
+        handler._send_json(200, {"deleted": True, "id": int(reminder_id)})
+    else:
+        handler._send_json(404, {"error": "reminder not found or already completed"})
 
 
 @router.post("/reminders/{reminder_id}/complete")
