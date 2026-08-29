@@ -12,6 +12,10 @@ import attention as a
 def main():
     pygame.init()
 
+    pygame.mixer.init()  # Initialize the mixer module for sound playback
+    new_toast = pygame.mixer.Sound("sounds/new_toast.mp3")
+    completed_toast = pygame.mixer.Sound("sounds/completed.mp3")
+
     # Screen settings
     screen_width = 1024   # Rotated width
     screen_height = 600  # Rotated height
@@ -84,6 +88,7 @@ def main():
 
             # handle reminder created event
             if event.type == api.REMINDER_CREATED:
+                new_toast.play()
                 toast_state.flash_toast = event.reminder
                 toast_state.flash_started = pygame.time.get_ticks()
                 attention.focus("bottom-left") 
@@ -91,6 +96,7 @@ def main():
             # handle reminder completed event
             if event.type == api.REMINDER_COMPLETED and toast_state.active_reminder and event.reminder_id == toast_state.active_reminder["id"]:
                 toast_state.toast_completed = True
+                completed_toast.play()
                 toast_state.happy_until = pygame.time.get_ticks() + 2500
                 mood_state.set("happy")
 
