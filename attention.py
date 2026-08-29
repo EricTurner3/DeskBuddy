@@ -1,5 +1,5 @@
 # attention.py
-from random import random
+import random
 
 import pygame
 
