@@ -6,6 +6,8 @@ import reminder_ui
 import sys
 import state
 import attention as a
+import weather as w
+import status_bar
 
 
 # Example usage within a Pygame application
@@ -65,6 +67,18 @@ def main():
         daemon=True,
     ).start()
 
+    # handle weather & time information
+    LAT, LON = 39.7684, -86.1581
+    weather_state = state.WeatherState()
+    stop_weather = threading.Event()
+    threading.Thread(
+        target=w.run_weather_poller,
+        args=(weather_state, LAT, LON, stop_weather),
+        daemon=True,
+    ).start()
+    time_font = pygame.font.Font(None, 28)
+    temp_font = pygame.font.Font(None, 24)
+
     # handle state information
     toast_state = state.ToastState()
     toast_font = pygame.font.Font(None, 30)
@@ -81,6 +95,7 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 stop_scheduler.set()
+                stop_weather.set()
                 api_server.shutdown()
                 pygame.quit()
                 sys.exit()
@@ -139,6 +154,8 @@ def main():
 
         # Blit the draw surface onto the main window
         window.blit(draw_surface, (draw_surface.get_rect(center=window.get_rect().center)))
+        status_bar.draw_status_bar(window, weather_state.get(), screen_width, time_font, temp_font)
+
 
         # Draw active reminder toast if any
         if toast_state.active_reminder:

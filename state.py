@@ -138,3 +138,27 @@ class ToastState:
     happy_until: int = 0
     flash_toast: dict | None = None
     flash_started: int = 0
+
+class WeatherState:
+    """Thread-safe weather cache. Unlike MoodState, this never touches pygame
+    objects directly, so both the fetch thread and main thread may call it."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self._condition = None   # e.g. "clear", "cloudy", "rain", "snow", "storm"
+        self._temp_f = None
+        self._updated_at = None
+
+    def set(self, condition, temp_f):
+        with self.lock:
+            self._condition = condition
+            self._temp_f = temp_f
+            self._updated_at = utc_now()
+
+    def get(self):
+        with self.lock:
+            return {
+                "condition": self._condition,
+                "temp_f": self._temp_f,
+                "updated_at": self._updated_at,
+            }
