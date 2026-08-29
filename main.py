@@ -27,6 +27,11 @@ def main():
     blink = pygame.mixer.Sound("sounds/shutter_dial.wav")
     blink.set_volume(0.15)
 
+    ui_open = pygame.mixer.Sound("sounds/ui_open.mp3")
+    ui_open.set_volume(0.15)
+    ui_close = pygame.mixer.Sound("sounds/ui_close.mp3")
+    ui_close.set_volume(0.15)
+
     # Screen settings
     screen_width = 1024   # Rotated width
     screen_height = 600  # Rotated height
@@ -137,12 +142,14 @@ def main():
                 if tab_rect.collidepoint(event.pos):
                     panel_state.open = not panel_state.open
                     panel_state.toggle_started = pygame.time.get_ticks()
+                    ui_open.play()
                     if panel_state.open:
                         panel_state.reminders = store.list()
                 elif panel_state.open:
                     panel_rect = panel_ui.get_panel_rect(screen_width, screen_height, panel_state.open, panel_state.toggle_started)
                     if not panel_rect.collidepoint(event.pos):
                         panel_state.open = False
+                        ui_close.play()
                         panel_state.toggle_started = pygame.time.get_ticks()
 
             # handle mouse click on the checkmark button in the reminder toast
