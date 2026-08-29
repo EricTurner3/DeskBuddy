@@ -37,6 +37,7 @@ class MoodState:
             return self._mood
 
     def set(self, mood):
+        print('> [MoodState] Setting mood to {}'.format(mood))
         if mood not in self.MOOD_MAP:
             raise ValueError(f"mood must be one of {sorted(self.MOOD_MAP)}")
         with self.lock:
