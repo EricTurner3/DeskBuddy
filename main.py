@@ -93,7 +93,7 @@ def main():
                 toast_state.flash_started = pygame.time.get_ticks()
                 attention.focus("bottom-left") 
 
-            # handle reminder completed event
+            # handle reminder completed event from api
             if event.type == api.REMINDER_COMPLETED and toast_state.active_reminder and event.reminder_id == toast_state.active_reminder["id"]:
                 toast_state.toast_completed = True
                 completed_toast.play()
@@ -104,7 +104,8 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and toast_state.active_reminder and not toast_state.toast_completed:
                 checkmark_rect = reminder_ui.get_checkmark_rect(screen_width, screen_height)
                 if checkmark_rect.collidepoint(event.pos):
-                    result = reminder_ui.mark_reminder_complete(store, toast_state.active_reminder["id"], robo_eyes)
+                    result = reminder_ui.mark_reminder_complete(store, toast_state.active_reminder["id"], mood_state)
+                    completed_toast.play()
                     toast_state.toast_completed = result["toast_completed"]
                     toast_state.happy_until = result["happy_until"]
 

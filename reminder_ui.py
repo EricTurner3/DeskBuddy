@@ -28,9 +28,9 @@ def get_checkmark_rect(screen_width, screen_height, toast_width=TOAST_WIDTH, toa
                         button_rect.width, button_rect.height)
 
 
-def mark_reminder_complete(store, reminder_id, robo_eyes):
+def mark_reminder_complete(store, reminder_id, mood_state):
     store.complete(reminder_id)
-    robo_eyes.setMood(r.HAPPY)
+    mood_state.set("happy")
     return {
         "toast_completed": True,
         "happy_until": pygame.time.get_ticks() + 2500,
