@@ -32,6 +32,7 @@ def main():
     robo_eyes.setHeight(300,300)
     robo_eyes.setSpacebetween(40)
     robo_eyes.setBorderradius(40, 40)
+    robo_eyes.setBottomPadding(140)  # Set bottom padding for toast notifications
 
     clock = pygame.time.Clock()
     store = api.ReminderStore()
@@ -42,7 +43,7 @@ def main():
         args=(store, stop_scheduler),
         daemon=True,
     ).start()
-    
+
     toast_font = pygame.font.Font(None, 30)
     toast_small_font = pygame.font.Font(None, 22)
     active_reminder = None
@@ -95,14 +96,15 @@ def main():
         robo_eyes.update()
 
         # Rotate the draw_surface by 90 degrees clockwise
-        rotated_surface = pygame.transform.rotate(draw_surface, 0)
-        rotated_rect = rotated_surface.get_rect(center=window.get_rect().center)
+        #rotated_surface = pygame.transform.rotate(draw_surface, 0)
+        #rotated_rect = rotated_surface.get_rect(center=window.get_rect().center)
 
         # Clear the window before blitting
         window.fill(r.BGCOLOR)
 
         # Blit the rotated surface onto the main window
-        window.blit(rotated_surface, rotated_rect)
+        #window.blit(rotated_surface, rotated_rect)
+        window.blit(draw_surface, (draw_surface.get_rect(center=window.get_rect().center)))
 
         if active_reminder:
             reminder_ui.draw_reminder_toast(

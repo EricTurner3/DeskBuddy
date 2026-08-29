@@ -40,6 +40,7 @@ class RoboEyes:
         self.surface = draw_surface
         self.screen_width = width
         self.screen_height = height
+        self.bottom_padding = 0 # padding UI elements on bottom of screen
         self.frame_interval = 1000 / frame_rate  # in milliseconds
         self.fps_timer = pygame.time.get_ticks()
 
@@ -154,6 +155,9 @@ class RoboEyes:
     def setFramerate(self, fps):
         self.frame_interval = 1000 / fps
 
+    def setBottomPadding(self, padding):
+        self.bottom_padding = padding
+
     def setWidth(self, leftEye, rightEye):
         self.eyeLwidth_next = leftEye
         self.eyeRwidth_next = rightEye
@@ -263,7 +267,7 @@ class RoboEyes:
         return self.screen_width - self.eyeLwidth_current - self.space_between_current - self.eyeRwidth_current
 
     def getScreenConstraint_Y(self):
-        return self.screen_height - self.eyeLheight_default - TOAST_BAND_HEIGHT
+        return self.screen_height - self.eyeLheight_default - self.bottom_padding
 
     # Blinking Methods
     def close(self, left=True, right=True):

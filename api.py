@@ -11,7 +11,6 @@ from urllib.parse import urlparse
 
 REMINDER_DUE = pygame.USEREVENT + 1
 REMINDER_COMPLETED = pygame.USEREVENT + 2
-TOAST_BAND_HEIGHT = 140
 
 
 class Router:
