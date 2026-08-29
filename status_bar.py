@@ -31,7 +31,7 @@ def _draw_icon(surface, condition, cx, cy):
         pygame.draw.circle(surface, (90, 100, 105), (cx, cy), 4)
 
 
-def draw_status_bar(window, weather, screen_width, time_font, temp_font):
+def draw_status_bar(window, weather, screen_width, screen_height, time_font, temp_font):
     bar = pygame.Surface((BAR_WIDTH, BAR_HEIGHT), pygame.SRCALPHA)
     pygame.draw.rect(bar, (18, 24, 28, 200), bar.get_rect(), border_radius=14)
 
@@ -46,4 +46,5 @@ def draw_status_bar(window, weather, screen_width, time_font, temp_font):
     bar.blit(temp_surface, (BAR_WIDTH - 40, (BAR_HEIGHT - temp_surface.get_height()) // 2))
 
     target_x = (screen_width - BAR_WIDTH) // 2
-    window.blit(bar, (target_x, 20))
+    target_y = (screen_height - BAR_HEIGHT)
+    window.blit(bar, (target_x, target_y))
