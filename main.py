@@ -97,8 +97,8 @@ def main():
 
             # handle mood change event
             if event.type == api.MOOD_CHANGED:
-                base_mood = mood_state.MOOD_MAP[event.mood]
-                # this allows for the API to change the mood on idle (no active reminder is present)
+                base_mood = event.mood
+                # this allows for the API to change the default idle mood (no active reminder is present)
                 if toast_state.active_reminder is None:
                     mood_state.set(base_mood)
 
