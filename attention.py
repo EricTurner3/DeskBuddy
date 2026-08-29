@@ -21,8 +21,8 @@ class AttentionController:
     Call update() once per frame alongside robo_eyes.update().
     """
 
-    BOUNCE_INTERVAL_MS = 900
-    BOUNCE_INTERVAL_VARIATION_MS = 300
+    BOUNCE_INTERVAL_MS = 1500
+    BOUNCE_INTERVAL_VARIATION_MS = 1000
 
     def __init__(self, robo_eyes):
         self.robo_eyes = robo_eyes
