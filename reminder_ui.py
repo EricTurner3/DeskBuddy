@@ -2,6 +2,7 @@ import pygame
 
 import roboeyes as r
 
+FLASH_TOAST_DURATION_MS = 4000
 
 def mark_reminder_complete(store, reminder_id, robo_eyes):
     store.complete(reminder_id)
@@ -11,8 +12,8 @@ def mark_reminder_complete(store, reminder_id, robo_eyes):
         "happy_until": pygame.time.get_ticks() + 2500,
     }
 
-
-def draw_reminder_toast(window, reminder, started, completed, screen_width, screen_height, toast_font, toast_small_font):
+# persistent toast which remains on screen until the user clicks the checkmark
+def draw_reminder_toast(window, title, started, completed, screen_width, screen_height, toast_font, toast_small_font):
     elapsed = pygame.time.get_ticks() - started
     progress = min(1.0, elapsed / 350.0)
     toast_width, toast_height = 440, 100
@@ -22,7 +23,7 @@ def draw_reminder_toast(window, reminder, started, completed, screen_width, scre
     toast = pygame.Surface((toast_width, toast_height), pygame.SRCALPHA)
     pygame.draw.rect(toast, (18, 24, 28, 245), toast.get_rect(), border_radius=14)
     pygame.draw.rect(toast, (70, 214, 137), (0, 0, 6, toast_height), border_radius=3)
-    title = toast_font.render(reminder["title"], True, (245, 250, 248))
+    title = toast_font.render(title, True, (245, 250, 248))
     toast.blit(title, (24, 18))
     status = "Completed" if completed else "Tap the checkmark when done"
     status_color = (120, 232, 160) if completed else (174, 190, 194)
@@ -35,3 +36,32 @@ def draw_reminder_toast(window, reminder, started, completed, screen_width, scre
                      (button_rect.x + 39, button_rect.y + 17), 4)
     window.blit(toast, (target_x, target_y if progress >= 1 else toast_y))
     return pygame.Rect(target_x + button_rect.x, target_y + button_rect.y, button_rect.width, button_rect.height)
+
+# disappearing toast with progress bar
+def draw_flash_toast(window, title, subtitle, started, duration_ms, screen_width, screen_height, toast_font, toast_small_font):
+    elapsed = pygame.time.get_ticks() - started
+    slide_progress = min(1.0, elapsed / 250.0)
+    remaining_fraction = max(0.0, 1.0 - (elapsed / duration_ms))
+
+    toast_width, toast_height = 440, 100
+    target_x = 24
+    target_y =  screen_height - toast_height - 24
+    toast_x = screen_width + 8 - int((toast_width + 32) * slide_progress)
+
+    toast = pygame.Surface((toast_width, toast_height), pygame.SRCALPHA)
+    pygame.draw.rect(toast, (18, 24, 28, 245), toast.get_rect(), border_radius=14)
+    pygame.draw.rect(toast, (125, 200, 255), (0, 0, 6, toast_height), border_radius=3)
+
+    title = toast_font.render(title, True, (245, 250, 248))
+    toast.blit(title, (24, 16))
+    toast.blit(toast_small_font.render(subtitle, True, (174, 190, 194)), (24, 48))
+
+    # Countdown progress bar along the bottom
+    bar_margin = 16
+    bar_height = 4
+    bar_full_width = toast_width - (bar_margin * 2)
+    bar_y = toast_height - bar_height - 10
+    pygame.draw.rect(toast, (45, 55, 58), (bar_margin, bar_y, bar_full_width, bar_height), border_radius=2)
+    pygame.draw.rect(toast, (125, 200, 255), (bar_margin, bar_y, int(bar_full_width * remaining_fraction), bar_height), border_radius=2)
+
+    window.blit(toast, (toast_x if slide_progress < 1 else target_x, target_y))

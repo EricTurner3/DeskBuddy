@@ -11,7 +11,9 @@ from urllib.parse import urlparse
 
 REMINDER_DUE = pygame.USEREVENT + 1
 REMINDER_COMPLETED = pygame.USEREVENT + 2
-
+MOOD_CHANGED = pygame.USEREVENT + 3
+REMINDER_CREATED = pygame.USEREVENT + 4
+VALID_MOODS = {"default", "tired", "angry", "happy"}
 
 class Router:
     """Minimal FastAPI-style router for BaseHTTPRequestHandler.
@@ -216,7 +218,9 @@ def create_reminder(handler):
         due_at = (utc_now() + timedelta(seconds=float(payload["delay_seconds"]))).isoformat()
     else:
         due_at = parse_due_at(payload.get("due_at"))
-    handler._send_json(201, handler.store.create(title, due_at))
+    reminder = handler.store.create(title, due_at)
+    pygame.event.post(pygame.event.Event(REMINDER_CREATED, reminder=reminder))
+    handler._send_json(201, reminder)
 
 
 @router.post("/reminders/{reminder_id}/complete")
@@ -228,6 +232,18 @@ def complete_reminder(handler, reminder_id):
         pygame.event.post(pygame.event.Event(REMINDER_COMPLETED, reminder_id=reminder["id"]))
         handler._send_json(200, reminder)
 
+'''
+    expects a JSON payload like {"mood": "happy"}
+    valid moods: default, tired, angry, happy
+'''
+@router.post("/mood")
+def set_mood(handler):
+    payload = handler._read_json()
+    mood = str(payload.get("mood", "")).strip().lower()
+    if mood not in VALID_MOODS:
+        raise ValueError(f"mood must be one of {sorted(VALID_MOODS)}")
+    pygame.event.post(pygame.event.Event(MOOD_CHANGED, mood=mood))
+    handler._send_json(200, {"mood": mood})
 
 def run_reminder_api(store, host="0.0.0.0", port=8765):
     ReminderHandler.store = store
