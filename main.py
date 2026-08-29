@@ -147,7 +147,7 @@ def main():
         # Draw flash toast if active
         if flash_toast:
             elapsed = pygame.time.get_ticks() - flash_started
-            if elapsed >= api.FLASH_TOAST_DURATION_MS:
+            if elapsed >= reminder_ui.FLASH_TOAST_DURATION_MS:
                 flash_toast = None
             else:
                 reminder_ui.draw_flash_toast(
@@ -155,7 +155,7 @@ def main():
                     flash_toast["title"],
                     "New Reminder Scheduled",
                     flash_started,
-                    api.FLASH_TOAST_DURATION_MS,
+                    reminder_ui.FLASH_TOAST_DURATION_MS,
                     screen_width,
                     screen_height,
                     toast_font,
