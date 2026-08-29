@@ -66,7 +66,9 @@ def main():
 
     # main game loop
     while True:
-        # Handle events
+        '''
+        Events Handling
+        '''
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 stop_scheduler.set()
@@ -96,16 +98,7 @@ def main():
 
             # handle mouse click on the checkmark button in the reminder toast
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and active_reminder and not toast_completed:
-                checkmark_rect = reminder_ui.draw_reminder_toast(
-                    window,
-                    active_reminder["title"],
-                    toast_started,
-                    toast_completed,
-                    screen_width,
-                    screen_height,
-                    toast_font,
-                    toast_small_font,
-                )
+                checkmark_rect = reminder_ui.get_checkmark_rect(screen_width, screen_height)
                 if checkmark_rect.collidepoint(event.pos):
                     result = reminder_ui.mark_reminder_complete(store, active_reminder["id"], robo_eyes)
                     toast_completed = result["toast_completed"]
@@ -117,15 +110,19 @@ def main():
                 if active_reminder is None:
                     robo_eyes.setMood(base_mood)
 
+        '''
+        Draw UI
+        '''
         # Update RoboEyes
         robo_eyes.update()
 
         # Clear the window before blitting
         window.fill(r.BGCOLOR)
 
-        # Blit the rotated surface onto the main window
+        # Blit the draw surface onto the main window
         window.blit(draw_surface, (draw_surface.get_rect(center=window.get_rect().center)))
 
+        # Draw active reminder toast if any
         if active_reminder:
             reminder_ui.draw_reminder_toast(
                 window,
@@ -139,6 +136,7 @@ def main():
             )
             if toast_completed and pygame.time.get_ticks() >= happy_until:
                 robo_eyes.setMood(base_mood)
+                # this is what removes the active toast and moves on to the next reminder if there is one
                 active_reminder = pending_reminders.pop(0) if pending_reminders else None
                 if active_reminder:
                     toast_started = pygame.time.get_ticks()
