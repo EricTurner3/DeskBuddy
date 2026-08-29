@@ -39,6 +39,8 @@ def main():
     robo_eyes.setBottomPadding(140)  # Set bottom padding for toast notifications
     mood_state = state.MoodState(robo_eyes=robo_eyes, initial=base_mood)
 
+    attention = attention.AttentionController(robo_eyes)
+
     clock = pygame.time.Clock()
     store = state.ReminderStore()
     api_server = api.run_reminder_api(store, mood_state)
@@ -53,6 +55,8 @@ def main():
     toast_state = state.ToastState()
     toast_font = pygame.font.Font(None, 30)
     toast_small_font = pygame.font.Font(None, 22)
+
+    #pending_reminders = []  # queue to hold pending reminders when a toast is already active
     
 
     # main game loop
@@ -73,6 +77,7 @@ def main():
                     toast_state.toast_started = pygame.time.get_ticks()
                     toast_state.toast_completed = False
                     mood_state.set("angry")
+                    attention.focus("bottom-right")
                 else:
                     toast_state.pending_reminders.append(event.reminder)
 
@@ -80,6 +85,7 @@ def main():
             if event.type == api.REMINDER_CREATED:
                 toast_state.flash_toast = event.reminder
                 toast_state.flash_started = pygame.time.get_ticks()
+                attention.focus("bottom-left") 
 
             # handle reminder completed event
             if event.type == api.REMINDER_COMPLETED and toast_state.active_reminder and event.reminder_id == toast_state.active_reminder["id"]:
@@ -107,6 +113,8 @@ def main():
         '''
         # Update RoboEyes
         robo_eyes.update()
+        # Update AttentionController
+        attention.update()
 
         # Clear the window before blitting
         window.fill(r.BGCOLOR)
@@ -133,12 +141,17 @@ def main():
                 if toast_state.active_reminder:
                     toast_state.toast_started = pygame.time.get_ticks()
                     toast_state.toast_completed = False
+                    attention.focus("bottom-right")
+                elif not toast_state.flash_toast:
+                    attention.release()
 
         # Draw flash toast if active
         if toast_state.flash_toast:
             elapsed = pygame.time.get_ticks() - toast_state.flash_started
             if elapsed >= reminder_ui.FLASH_TOAST_DURATION_MS:
                 toast_state.flash_toast = None
+                if not toast_state.active_reminder:
+                    attention.release()
             else:
                 reminder_ui.draw_flash_toast(
                     window,
