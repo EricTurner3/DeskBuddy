@@ -12,7 +12,7 @@ def mark_reminder_complete(store, reminder_id, robo_eyes):
     }
 
 
-def draw_reminder_toast(window, reminder, started, completed, screen_width, screen_height, toast_font=pygame.font.Font(None, 30), toast_small_font=pygame.font.Font(None, 22)):
+def draw_reminder_toast(window, reminder, started, completed, screen_width, screen_height, toast_font, toast_small_font):
     elapsed = pygame.time.get_ticks() - started
     progress = min(1.0, elapsed / 350.0)
     toast_width, toast_height = 440, 100

@@ -42,8 +42,9 @@ def main():
         args=(store, stop_scheduler),
         daemon=True,
     ).start()
-
-    # track the state of reminders and toasts
+    
+    toast_font = pygame.font.Font(None, 30)
+    toast_small_font = pygame.font.Font(None, 22)
     active_reminder = None
     pending_reminders = []
     toast_started = 0
@@ -82,6 +83,8 @@ def main():
                     toast_completed,
                     screen_width,
                     screen_height,
+                    toast_font,
+                    toast_small_font,
                 )
                 if checkmark_rect.collidepoint(event.pos):
                     result = reminder_ui.mark_reminder_complete(store, active_reminder["id"], robo_eyes)
