@@ -17,7 +17,9 @@ def main():
     toast_due = pygame.mixer.Sound("sounds/reminder_due.mp3") # for reminder due event
     completed_toast = pygame.mixer.Sound("sounds/completed.mp3")
     mood_change = pygame.mixer.Sound("sounds/focus_7.wav")
-    mood_change.set_volume(0.5)  # lower volume
+    mood_change.set_volume(0.5)
+    movement = pygame.mixer.Sound("sounds/focus_12.wav")
+    movement.set_volume(0.5)
 
     # Screen settings
     screen_width = 1024   # Rotated width
@@ -45,6 +47,7 @@ def main():
     robo_eyes.setSpacebetween(40)
     robo_eyes.setBorderradius(40, 40)
     robo_eyes.setBottomPadding(140)  # Set bottom padding for toast notifications
+    robo_eyes.on_move = lambda x, y: movement.play()
     mood_state = state.MoodState(robo_eyes=robo_eyes, initial=base_mood)
 
     attention = a.AttentionController(robo_eyes)

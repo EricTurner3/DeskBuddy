@@ -53,8 +53,7 @@ class AttentionController:
         self.target_fraction = None
         max_x = self.robo_eyes.getScreenConstraint_X()
         max_y = self.robo_eyes.getScreenConstraint_Y()
-        self.robo_eyes.eyeLx_next = max_x // 2
-        self.robo_eyes.eyeLy_next = max_y // 2
+        self.robo_eyes.setTarget(max_x // 2, max_y // 2)
         if self._idle_before_focus:
             self.robo_eyes.setIdleMode(True)
 
@@ -73,8 +72,6 @@ class AttentionController:
         max_y = self.robo_eyes.getScreenConstraint_Y()
         if self.looking_at_target:
             frac_x, frac_y = self.target_fraction
-            self.robo_eyes.eyeLx_next = int(max_x * frac_x)
-            self.robo_eyes.eyeLy_next = int(max_y * frac_y)
+            self.robo_eyes.setTarget(int(max_x * frac_x), int(max_y * frac_y))
         else:
-            self.robo_eyes.eyeLx_next = max_x // 2
-            self.robo_eyes.eyeLy_next = max_y // 2
+            self.robo_eyes.setTarget(max_x // 2, max_y // 2)

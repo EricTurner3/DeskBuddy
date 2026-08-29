@@ -139,6 +139,8 @@ class RoboEyes:
         self.laugh_animation_duration = 500  # in milliseconds
         self.laugh_toggle = True
 
+        self.on_move = None  # optional callback(x, y) invoked whenever a NEW eye target is set
+
     # General Setup
     def begin(self):
         self.clear_display()
@@ -196,33 +198,39 @@ class RoboEyes:
 
     def setPosition(self, position):
         if position == N:
-            self.eyeLx_next = self.getScreenConstraint_X() // 2
-            self.eyeLy_next = 0
+            self.setTarget(self.getScreenConstraint_X() // 2, 0)
         elif position == NE:
-            self.eyeLx_next = self.getScreenConstraint_X()
-            self.eyeLy_next = 0
+            self.setTarget(self.getScreenConstraint_X(), 0)
         elif position == E:
-            self.eyeLx_next = self.getScreenConstraint_X()
-            self.eyeLy_next = self.getScreenConstraint_Y() // 2
+            self.setTarget(self.getScreenConstraint_X(), self.getScreenConstraint_Y() // 2)
         elif position == SE:
-            self.eyeLx_next = self.getScreenConstraint_X()
-            self.eyeLy_next = self.getScreenConstraint_Y()
+            self.setTarget(self.getScreenConstraint_X(), self.getScreenConstraint_Y())
         elif position == S:
-            self.eyeLx_next = self.getScreenConstraint_X() // 2
-            self.eyeLy_next = self.getScreenConstraint_Y()
+            self.setTarget(self.getScreenConstraint_X() // 2, self.getScreenConstraint_Y())
         elif position == SW:
-            self.eyeLx_next = 0
-            self.eyeLy_next = self.getScreenConstraint_Y()
+            self.setTarget(0, self.getScreenConstraint_Y())
         elif position == W:
-            self.eyeLx_next = 0
-            self.eyeLy_next = self.getScreenConstraint_Y() // 2
+            self.setTarget(0, self.getScreenConstraint_Y() // 2)
         elif position == NW:
-            self.eyeLx_next = 0
-            self.eyeLy_next = 0
+            self.setTarget(0, 0)
         else:
-            # Default: Middle center
-            self.eyeLx_next = self.getScreenConstraint_X() // 2
-            self.eyeLy_next = self.getScreenConstraint_Y() // 2
+            self.setTarget(self.getScreenConstraint_X() // 2, self.getScreenConstraint_Y() // 2)
+
+    def setTarget(self, x, y):
+        """Central entry point for repositioning the eyes' look target.
+
+        Used by idle wandering, setPosition(), and any external controller
+        (e.g. AttentionController). Clamps to the screen constraint and fires
+        on_move only when the target actually changes, so smooth per-frame
+        interpolation toward an existing target never re-triggers it.
+        """
+        x = max(0, min(x, self.getScreenConstraint_X()))
+        y = max(0, min(y, self.getScreenConstraint_Y()))
+        changed = (x != self.eyeLx_next) or (y != self.eyeLy_next)
+        self.eyeLx_next = x
+        self.eyeLy_next = y
+        if changed and self.on_move:
+            self.on_move(x, y)
 
     def setAutoblinker(self, active, interval=2, variation=4):
         """
@@ -390,8 +398,10 @@ class RoboEyes:
 
         # Idle Animation
         if self.idle and (current_time >= self.idle_animation_timer):
-            self.eyeLx_next = random.randint(0, self.getScreenConstraint_X())
-            self.eyeLy_next = random.randint(0, self.getScreenConstraint_Y())
+            self.setTarget(
+                random.randint(0, self.getScreenConstraint_X()),
+                random.randint(0, self.getScreenConstraint_Y()),
+            )
             variation = random.randint(0, self.idle_interval_variation)
             self.idle_animation_timer = current_time + self.idle_interval + variation
 
