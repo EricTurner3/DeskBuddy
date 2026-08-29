@@ -21,7 +21,7 @@ Desk Buddy is a python based application meant for raspberry pi with a touch scr
    ```
 2. Install required dependencies:
    ```bash
-   pip install pygame
+   pip install pygame # or pygame-ce
    ```
 3. Run:
    ```bash
