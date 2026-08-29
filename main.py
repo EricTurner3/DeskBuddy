@@ -98,7 +98,7 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and active_reminder and not toast_completed:
                 checkmark_rect = reminder_ui.draw_reminder_toast(
                     window,
-                    active_reminder,
+                    active_reminder["title"],
                     toast_started,
                     toast_completed,
                     screen_width,
