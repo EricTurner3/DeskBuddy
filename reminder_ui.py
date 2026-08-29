@@ -35,8 +35,8 @@ def draw_reminder_toast(window, title, started, completed, screen_width, screen_
     toast = pygame.Surface((toast_width, toast_height), pygame.SRCALPHA)
     pygame.draw.rect(toast, (18, 24, 28, 245), toast.get_rect(), border_radius=14)
     pygame.draw.rect(toast, (70, 214, 137), (0, 0, 6, toast_height), border_radius=3)
-    title = toast_font.render(title, True, (245, 250, 248))
-    toast.blit(title, (24, 18))
+    toast_title = toast_font.render(title, True, (245, 250, 248))
+    toast.blit(toast_title, (24, 18))
     status = "Completed" if completed else "Tap the checkmark when done"
     status_color = (120, 232, 160) if completed else (174, 190, 194)
     toast.blit(toast_small_font.render(status, True, status_color), (24, 55))
@@ -63,8 +63,8 @@ def draw_flash_toast(window, title, subtitle, started, duration_ms, screen_width
     pygame.draw.rect(toast, (18, 24, 28, 245), toast.get_rect(), border_radius=14)
     pygame.draw.rect(toast, (125, 200, 255), (0, 0, 6, toast_height), border_radius=3)
 
-    title = toast_font.render(title, True, (245, 250, 248))
-    toast.blit(title, (24, 16))
+    toast_title = toast_font.render(title, True, (245, 250, 248))
+    toast.blit(toast_title, (24, 16))
     toast.blit(toast_small_font.render(subtitle, True, (174, 190, 194)), (24, 48))
 
     # Countdown progress bar along the bottom
