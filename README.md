@@ -1,8 +1,15 @@
 # DeskBuddy
 
+<img src="./images/default.png" width="25%" alt="Default Mood">
+<img src="./images/reminder.png" width="25%" alt="Angry Mood"> <br/>
+<img src="./images/happy.png" width="25%" alt="Happy Mood">
+<img src="./images/tired.png" width="25%" alt="Tired Mood">
+
 Desk Buddy is a python based application meant for raspberry pi with a touch screen. It features:
 - robotic eyes via a modified [RoboEyes](https://github.com/sofianhw/RoboEyes) library for visuals
-- an API to send new reminders
+- an API to send reminders, or modify DeskBuddy's default mood
+- a status bar with current time and weather
+- sound effects for new notifications, or DeskBuddy's movements
 
 ---
 

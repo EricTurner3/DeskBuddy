@@ -1,4 +1,5 @@
 # HomeAssistant Integration
+<img src="./images/homeassistant.png" width="50%" alt="Home Assistant">
 
 Control the robot's mood and see next reminder via HomeAssistant's UI
 

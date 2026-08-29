@@ -1,5 +1,6 @@
 import pygame
 from datetime import datetime
+import platform
 
 BAR_WIDTH = 280
 BAR_HEIGHT = 64
@@ -36,7 +37,11 @@ def draw_status_bar(window, weather, screen_width, screen_height, time_font, tem
     bar = pygame.Surface((BAR_WIDTH, BAR_HEIGHT), pygame.SRCALPHA)
     pygame.draw.rect(bar, (18, 24, 28, 200), bar.get_rect(), border_radius=14)
 
-    now_text = datetime.now().strftime("%-I:%M %p")  # use %#I on Windows
+    if platform.system() == "Windows":
+        now_text = datetime.now().strftime("%#I:%M %p")
+    else:
+        now_text = datetime.now().strftime("%-I:%M %p")
+
     time_surface = time_font.render(now_text, True, (245, 250, 248))
     bar.blit(time_surface, (18, (BAR_HEIGHT - time_surface.get_height()) // 2))
 
