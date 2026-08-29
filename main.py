@@ -5,6 +5,7 @@ import api
 import reminder_ui
 import sys
 import state
+import attention
 
 
 # Example usage within a Pygame application
