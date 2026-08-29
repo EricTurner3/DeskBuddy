@@ -68,3 +68,5 @@ This project is licensed under the **GNU General Public License (GPL)**.
 
 - [RoboEyes](https://github.com/sofianhw/RoboEyes) - a python implementation using Pygame to create robotic eyes. 
     - this serves as the base for the animations, I made a few tweaks for DeskBuddy!
+- Sounds
+    - Focus 7.wav by theplax -- https://freesound.org/s/624927/ -- License: Attribution 4.0 

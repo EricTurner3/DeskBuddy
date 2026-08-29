@@ -13,8 +13,11 @@ def main():
     pygame.init()
 
     pygame.mixer.init()  # Initialize the mixer module for sound playback
-    new_toast = pygame.mixer.Sound("sounds/new_toast.mp3")
+    new_toast = pygame.mixer.Sound("sounds/new_toast.mp3") # for new reminder created event
+    toast_due = pygame.mixer.Sound("sounds/reminder_due.mp3") # for reminder due event
     completed_toast = pygame.mixer.Sound("sounds/completed.mp3")
+    mood_change = pygame.mixer.Sound("sounds/focus_7.wav")
+    mood_change.set_volume(0.5)  # lower volume
 
     # Screen settings
     screen_width = 1024   # Rotated width
@@ -81,7 +84,8 @@ def main():
                     toast_state.active_reminder = event.reminder
                     toast_state.toast_started = pygame.time.get_ticks()
                     toast_state.toast_completed = False
-                    mood_state.set("angry")
+                    toast_due.play()
+                    mood_state.set("angry", sound=mood_change)
                     attention.focus("bottom-right")
                 else:
                     toast_state.pending_reminders.append(event.reminder)
@@ -98,13 +102,13 @@ def main():
                 toast_state.toast_completed = True
                 completed_toast.play()
                 toast_state.happy_until = pygame.time.get_ticks() + 2500
-                mood_state.set("happy")
+                mood_state.set("happy", sound=mood_change)
 
             # handle mouse click on the checkmark button in the reminder toast
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and toast_state.active_reminder and not toast_state.toast_completed:
                 checkmark_rect = reminder_ui.get_checkmark_rect(screen_width, screen_height)
                 if checkmark_rect.collidepoint(event.pos):
-                    result = reminder_ui.mark_reminder_complete(store, toast_state.active_reminder["id"], mood_state)
+                    result = reminder_ui.mark_reminder_complete(store, toast_state.active_reminder["id"], mood_state, sound=mood_change)
                     completed_toast.play()
                     toast_state.toast_completed = result["toast_completed"]
                     toast_state.happy_until = result["happy_until"]
@@ -114,7 +118,7 @@ def main():
                 base_mood = event.mood
                 # this allows for the API to change the default idle mood (no active reminder is present)
                 if toast_state.active_reminder is None:
-                    mood_state.set(base_mood)
+                    mood_state.set(base_mood, sound=mood_change)
 
         '''
         Draw UI
@@ -143,7 +147,7 @@ def main():
                 toast_small_font,
             )
             if toast_state.toast_completed and pygame.time.get_ticks() >= toast_state.happy_until:
-                mood_state.set(base_mood)
+                mood_state.set(base_mood, sound=mood_change)
                 # this is what removes the active toast and moves on to the next reminder if there is one
                 toast_state.active_reminder = toast_state.pending_reminders.pop(0) if toast_state.pending_reminders else None
                 if toast_state.active_reminder:

@@ -36,7 +36,7 @@ class MoodState:
         with self.lock:
             return self._mood
 
-    def set(self, mood):
+    def set(self, mood, sound=None):
         print('> [MoodState] Setting mood to {}'.format(mood))
         if mood not in self.MOOD_MAP:
             raise ValueError(f"mood must be one of {sorted(self.MOOD_MAP)}")
@@ -44,6 +44,8 @@ class MoodState:
             self._mood = mood
             if self.robo_eyes is not None:
                 self.robo_eyes.setMood(self.MOOD_MAP[mood])
+            if sound:
+                sound.play()
 
     def set_const(self, mood_const):
         """Convenience for callers that already have a roboeyes constant (r.ANGRY, etc.)."""
