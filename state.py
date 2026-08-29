@@ -194,3 +194,9 @@ class WeatherState:
                 "temp_f": self._temp_f,
                 "updated_at": self._updated_at,
             }
+
+@dataclass
+class PanelState:
+    open: bool = False
+    toggle_started: int = 0
+    reminders: list = field(default_factory=list)

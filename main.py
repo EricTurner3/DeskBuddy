@@ -1,3 +1,4 @@
+import panel_ui
 import pygame
 import threading
 import roboeyes as r
@@ -8,6 +9,7 @@ import state
 import attention as a
 import weather as w
 import status_bar
+import panel_ui
 
 
 # Example usage within a Pygame application
@@ -85,7 +87,9 @@ def main():
     toast_small_font = pygame.font.Font(None, 22)
 
     #pending_reminders = []  # queue to hold pending reminders when a toast is already active
-    
+    panel_state = state.PanelState()
+    panel_title_font = pygame.font.Font(None, 26)
+    panel_meta_font = pygame.font.Font(None, 20)
 
     # main game loop
     while True:
@@ -117,6 +121,7 @@ def main():
                 toast_state.flash_toast = event.reminder
                 toast_state.flash_started = pygame.time.get_ticks()
                 attention.focus("bottom-left") 
+                panel_state.reminders = store.list()
 
             # handle reminder completed event from api
             if event.type == api.REMINDER_COMPLETED and toast_state.active_reminder and event.reminder_id == toast_state.active_reminder["id"]:
@@ -124,6 +129,21 @@ def main():
                 completed_toast.play()
                 toast_state.happy_until = pygame.time.get_ticks() + 2500
                 mood_state.set("happy", sound=mood_change)
+                panel_state.reminders = store.list()
+
+            # handle click on the panel tab or outside the panel to toggle open/close
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                tab_rect = panel_ui.get_tab_rect(screen_width, screen_height)
+                if tab_rect.collidepoint(event.pos):
+                    panel_state.open = not panel_state.open
+                    panel_state.toggle_started = pygame.time.get_ticks()
+                    if panel_state.open:
+                        panel_state.reminders = store.list()
+                elif panel_state.open:
+                    panel_rect = panel_ui.get_panel_rect(screen_width, screen_height, panel_state.open, panel_state.toggle_started)
+                    if not panel_rect.collidepoint(event.pos):
+                        panel_state.open = False
+                        panel_state.toggle_started = pygame.time.get_ticks()
 
             # handle mouse click on the checkmark button in the reminder toast
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and toast_state.active_reminder and not toast_state.toast_completed:
@@ -131,6 +151,7 @@ def main():
                 if checkmark_rect.collidepoint(event.pos):
                     result = reminder_ui.mark_reminder_complete(store, toast_state.active_reminder["id"], mood_state, sound=mood_change)
                     completed_toast.play()
+                    panel_state.reminders = store.list()
                     toast_state.toast_completed = result["toast_completed"]
                     toast_state.happy_until = result["happy_until"]
 
@@ -199,6 +220,12 @@ def main():
                     toast_font,
                     toast_small_font,
                 )
+
+        panel_ui.draw_reminder_panel(
+            window, panel_state.reminders, screen_width, screen_height,
+            panel_state.open, panel_state.toggle_started, panel_title_font, panel_meta_font,
+        )
+        panel_ui.draw_panel_tab(window, screen_width, screen_height, panel_state.open)
 
         # Update the display
         pygame.display.flip()
