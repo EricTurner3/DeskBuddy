@@ -154,7 +154,7 @@ def main():
 
         # Blit the draw surface onto the main window
         window.blit(draw_surface, (draw_surface.get_rect(center=window.get_rect().center)))
-        status_bar.draw_status_bar(window, weather_state.get(), screen_width, time_font, temp_font)
+        status_bar.draw_status_bar(window, weather_state.get(), screen_width, screen_height, time_font, temp_font)
 
 
         # Draw active reminder toast if any
