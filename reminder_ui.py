@@ -4,6 +4,19 @@ import roboeyes as r
 
 FLASH_TOAST_DURATION_MS = 4000
 
+# human readable location on screen
+def location(screen_width, screen_height, toast_width, toast_height, position):
+    if position == "top-left":
+        return 24, 24
+    elif position == "top-right":
+        return screen_width - toast_width - 24, 24
+    elif position == "bottom-left":
+        return 24, screen_height - toast_height - 24
+    elif position == "bottom-right":
+        return screen_width - toast_width - 24, screen_height - toast_height - 24
+    else:
+        raise ValueError(f"Invalid position: {position}")
+
 def mark_reminder_complete(store, reminder_id, robo_eyes):
     store.complete(reminder_id)
     robo_eyes.setMood(r.HAPPY)
@@ -17,8 +30,7 @@ def draw_reminder_toast(window, title, started, completed, screen_width, screen_
     elapsed = pygame.time.get_ticks() - started
     progress = min(1.0, elapsed / 350.0)
     toast_width, toast_height = 440, 100
-    target_x = screen_width - toast_width - 24
-    target_y = screen_height - toast_height - 24
+    target_x, target_y = location(screen_width, screen_height, toast_width, toast_height, "bottom-right")
     toast_y = screen_height + 8 - int((toast_height + 32) * progress)
     toast = pygame.Surface((toast_width, toast_height), pygame.SRCALPHA)
     pygame.draw.rect(toast, (18, 24, 28, 245), toast.get_rect(), border_radius=14)
@@ -44,8 +56,7 @@ def draw_flash_toast(window, title, subtitle, started, duration_ms, screen_width
     remaining_fraction = max(0.0, 1.0 - (elapsed / duration_ms))
 
     toast_width, toast_height = 440, 100
-    target_x = 24
-    target_y =  screen_height - toast_height - 24
+    target_x, target_y = location(screen_width, screen_height, toast_width, toast_height, "bottom-left")
     toast_x = screen_width + 8 - int((toast_width + 32) * slide_progress)
 
     toast = pygame.Surface((toast_width, toast_height), pygame.SRCALPHA)
