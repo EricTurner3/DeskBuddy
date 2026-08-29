@@ -4,13 +4,8 @@ import roboeyes as r
 import api
 import reminder_ui
 import sys
+import state
 
-MOOD_MAP = {
-    "default": r.DEFAULT,
-    "tired": r.TIRED,
-    "angry": r.ANGRY,
-    "happy": r.HAPPY,
-}
 
 # Example usage within a Pygame application
 def main():
@@ -28,12 +23,12 @@ def main():
     draw_surface = pygame.Surface((draw_width, draw_height))
     draw_surface.fill(r.BGCOLOR)  # Ensure it's cleared initially
 
-    base_mood = r.DEFAULT   # the mood to return to when no reminder is active
+    base_mood = "default"   # the mood to return to when no reminder is active
+    
 
     # Create RoboEyes instance
     robo_eyes = r.RoboEyes(draw_surface, width=draw_width, height=draw_height, frame_rate=60)
     robo_eyes.begin()
-    robo_eyes.setMood(base_mood)
     robo_eyes.setAutoblinker(True, interval=6, variation=7)
     robo_eyes.setIdleMode(True, interval=5, variation=5)
     robo_eyes.setCuriosity(True)
@@ -42,10 +37,11 @@ def main():
     robo_eyes.setSpacebetween(40)
     robo_eyes.setBorderradius(40, 40)
     robo_eyes.setBottomPadding(140)  # Set bottom padding for toast notifications
+    mood_state = state.MoodState(robo_eyes=robo_eyes, initial=base_mood)
 
     clock = pygame.time.Clock()
-    store = api.ReminderStore()
-    api_server = api.run_reminder_api(store)
+    store = state.ReminderStore()
+    api_server = api.run_reminder_api(store, mood_state)
     stop_scheduler = threading.Event()
     threading.Thread(
         target=api.run_reminder_scheduler,
@@ -54,15 +50,10 @@ def main():
     ).start()
 
     # handle state information
+    toast_state = state.ToastState()
     toast_font = pygame.font.Font(None, 30)
     toast_small_font = pygame.font.Font(None, 22)
-    active_reminder = None
-    pending_reminders = []
-    toast_started = 0
-    toast_completed = False
-    happy_until = 0
-    flash_toast = None
-    flash_started = 0
+    
 
     # main game loop
     while True:
@@ -77,38 +68,39 @@ def main():
                 sys.exit()
 
             if event.type == api.REMINDER_DUE:
-                if active_reminder is None:
-                    active_reminder = event.reminder
-                    toast_started = pygame.time.get_ticks()
-                    toast_completed = False
-                    robo_eyes.setMood(r.ANGRY)
+                if toast_state.active_reminder is None:
+                    toast_state.active_reminder = event.reminder
+                    toast_state.toast_started = pygame.time.get_ticks()
+                    toast_state.toast_completed = False
+                    mood_state.set("angry")
                 else:
-                    pending_reminders.append(event.reminder)
+                    toast_state.pending_reminders.append(event.reminder)
 
             # handle reminder created event
             if event.type == api.REMINDER_CREATED:
-                flash_toast = event.reminder
-                flash_started = pygame.time.get_ticks()
+                toast_state.flash_toast = event.reminder
+                toast_state.flash_started = pygame.time.get_ticks()
 
             # handle reminder completed event
-            if event.type == api.REMINDER_COMPLETED and active_reminder and event.reminder_id == active_reminder["id"]:
-                toast_completed = True
-                happy_until = pygame.time.get_ticks() + 2500
-                robo_eyes.setMood(r.HAPPY)
+            if event.type == api.REMINDER_COMPLETED and toast_state.active_reminder and event.reminder_id == toast_state.active_reminder["id"]:
+                toast_state.toast_completed = True
+                toast_state.happy_until = pygame.time.get_ticks() + 2500
+                mood_state.set("happy")
 
             # handle mouse click on the checkmark button in the reminder toast
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and active_reminder and not toast_completed:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and toast_state.active_reminder and not toast_state.toast_completed:
                 checkmark_rect = reminder_ui.get_checkmark_rect(screen_width, screen_height)
                 if checkmark_rect.collidepoint(event.pos):
-                    result = reminder_ui.mark_reminder_complete(store, active_reminder["id"], robo_eyes)
-                    toast_completed = result["toast_completed"]
-                    happy_until = result["happy_until"]
+                    result = reminder_ui.mark_reminder_complete(store, toast_state.active_reminder["id"], robo_eyes)
+                    toast_state.toast_completed = result["toast_completed"]
+                    toast_state.happy_until = result["happy_until"]
 
             # handle mood change event
             if event.type == api.MOOD_CHANGED:
-                base_mood = MOOD_MAP[event.mood]
-                if active_reminder is None:
-                    robo_eyes.setMood(base_mood)
+                base_mood = mood_state.MOOD_MAP[event.mood]
+                # this allows for the API to change the mood on idle (no active reminder is present)
+                if toast_state.active_reminder is None:
+                    mood_state.set(base_mood)
 
         '''
         Draw UI
@@ -123,36 +115,36 @@ def main():
         window.blit(draw_surface, (draw_surface.get_rect(center=window.get_rect().center)))
 
         # Draw active reminder toast if any
-        if active_reminder:
+        if toast_state.active_reminder:
             reminder_ui.draw_reminder_toast(
                 window,
-                active_reminder["title"],
-                toast_started,
-                toast_completed,
+                toast_state.active_reminder["title"],
+                toast_state.toast_started,
+                toast_state.toast_completed,
                 screen_width,
                 screen_height,
                 toast_font,
                 toast_small_font,
             )
-            if toast_completed and pygame.time.get_ticks() >= happy_until:
-                robo_eyes.setMood(base_mood)
+            if toast_state.toast_completed and pygame.time.get_ticks() >= toast_state.happy_until:
+                mood_state.set(base_mood)
                 # this is what removes the active toast and moves on to the next reminder if there is one
-                active_reminder = pending_reminders.pop(0) if pending_reminders else None
-                if active_reminder:
-                    toast_started = pygame.time.get_ticks()
-                    toast_completed = False
+                toast_state.active_reminder = toast_state.pending_reminders.pop(0) if toast_state.pending_reminders else None
+                if toast_state.active_reminder:
+                    toast_state.toast_started = pygame.time.get_ticks()
+                    toast_state.toast_completed = False
 
         # Draw flash toast if active
-        if flash_toast:
-            elapsed = pygame.time.get_ticks() - flash_started
+        if toast_state.flash_toast:
+            elapsed = pygame.time.get_ticks() - toast_state.flash_started
             if elapsed >= reminder_ui.FLASH_TOAST_DURATION_MS:
-                flash_toast = None
+                toast_state.flash_toast = None
             else:
                 reminder_ui.draw_flash_toast(
                     window,
-                    flash_toast["title"],
+                    toast_state.flash_toast["title"],
                     "New Reminder Scheduled",
-                    flash_started,
+                    toast_state.flash_started,
                     reminder_ui.FLASH_TOAST_DURATION_MS,
                     screen_width,
                     screen_height,

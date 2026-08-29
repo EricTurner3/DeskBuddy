@@ -1,19 +1,17 @@
 import pygame
 import json
 import re
-import sqlite3
+
 import threading
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
-
-
+from helper import utc_now, parse_due_at
 
 REMINDER_DUE = pygame.USEREVENT + 1
 REMINDER_COMPLETED = pygame.USEREVENT + 2
 MOOD_CHANGED = pygame.USEREVENT + 3
 REMINDER_CREATED = pygame.USEREVENT + 4
-VALID_MOODS = {"default", "tired", "angry", "happy"}
 
 class Router:
     """Minimal FastAPI-style router for BaseHTTPRequestHandler.
@@ -65,97 +63,9 @@ class Router:
 router = Router()
 
 
-def utc_now():
-    return datetime.now(timezone.utc)
-
-
-def parse_due_at(value):
-    if not value:
-        raise ValueError("due_at is required")
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc).isoformat()
-
-
-class ReminderStore:
-    def __init__(self, path="reminders.db"):
-        self.path = path
-        self.lock = threading.Lock()
-        with self._connect() as connection:
-            connection.execute(
-                """CREATE TABLE IF NOT EXISTS reminders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    due_at TEXT NOT NULL,
-                    completed INTEGER NOT NULL DEFAULT 0,
-                    triggered INTEGER NOT NULL DEFAULT 0
-                )"""
-            )
-
-    def _connect(self):
-        return sqlite3.connect(self.path, timeout=10)
-
-    def create(self, title, due_at):
-        with self.lock, self._connect() as connection:
-            print('+ Adding Reminder {} - due at {}'.format(title, due_at))
-            cursor = connection.execute(
-                "INSERT INTO reminders (title, due_at) VALUES (?, ?)",
-                (title, due_at),
-            )
-            reminder_id = cursor.lastrowid
-        return self.get(reminder_id)
-
-    def get(self, reminder_id):
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT id, title, due_at, completed FROM reminders WHERE id = ?",
-                (reminder_id,),
-            ).fetchone()
-        return self._as_dict(row) if row else None
-
-    def list(self):
-        with self._connect() as connection:
-            rows = connection.execute(
-                "SELECT id, title, due_at, completed FROM reminders "
-                "WHERE completed = 0 ORDER BY due_at"
-            ).fetchall()
-        return [self._as_dict(row) for row in rows]
-
-    def complete(self, reminder_id):
-        with self.lock, self._connect() as connection:
-            connection.execute(
-                "UPDATE reminders SET completed = 1 WHERE id = ?",
-                (reminder_id,),
-            )
-        return self.get(reminder_id)
-
-    def due(self):
-        now = utc_now().isoformat()
-        with self.lock, self._connect() as connection:
-            rows = connection.execute(
-                "SELECT id, title, due_at FROM reminders "
-                "WHERE completed = 0 AND triggered = 0 AND due_at <= ?",
-                (now,),
-            ).fetchall()
-            connection.executemany(
-                "UPDATE reminders SET triggered = 1 WHERE id = ?",
-                [(row[0],) for row in rows],
-            )
-        return [{"id": row[0], "title": row[1], "due_at": row[2]} for row in rows]
-
-    @staticmethod
-    def _as_dict(row):
-        return {
-            "id": row[0],
-            "title": row[1],
-            "due_at": row[2],
-            "completed": bool(row[3]),
-        }
-
-
-class ReminderHandler(BaseHTTPRequestHandler):
-    store = None
+class APIHandler(BaseHTTPRequestHandler):
+    store = None        # Reminder State
+    mood_state = None   # RoboEyes Mood State
 
     def __str__(self):
         return f"{self.command} {self.path}"
@@ -240,14 +150,19 @@ def complete_reminder(handler, reminder_id):
 def set_mood(handler):
     payload = handler._read_json()
     mood = str(payload.get("mood", "")).strip().lower()
-    if mood not in VALID_MOODS:
-        raise ValueError(f"mood must be one of {sorted(VALID_MOODS)}")
+    if mood not in handler.mood_state.MOOD_MAP:
+        raise ValueError(f"mood must be one of {sorted(handler.mood_state.MOOD_MAP)}")
     pygame.event.post(pygame.event.Event(MOOD_CHANGED, mood=mood))
     handler._send_json(200, {"mood": mood})
 
-def run_reminder_api(store, host="0.0.0.0", port=8765):
-    ReminderHandler.store = store
-    server = ThreadingHTTPServer((host, port), ReminderHandler)
+@router.get("/mood")
+def get_mood(handler):
+    handler._send_json(200, {"mood": handler.mood_state.get()})
+
+def run_reminder_api(store, mood_state, host="0.0.0.0", port=8765):
+    APIHandler.store = store # load the ReminderStore state so it can be referenced by other calls
+    APIHandler.mood_state = mood_state # load the MoodState so it can be referenced by other calls
+    server = ThreadingHTTPServer((host, port), APIHandler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print('* API Started on {}:{}'.format(host, port))
     return server
