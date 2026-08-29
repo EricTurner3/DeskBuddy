@@ -5,7 +5,7 @@ import api
 import reminder_ui
 import sys
 import state
-import attention
+import attention as a
 
 
 # Example usage within a Pygame application
@@ -40,7 +40,7 @@ def main():
     robo_eyes.setBottomPadding(140)  # Set bottom padding for toast notifications
     mood_state = state.MoodState(robo_eyes=robo_eyes, initial=base_mood)
 
-    attention = attention.AttentionController(robo_eyes)
+    attention = a.AttentionController(robo_eyes)
 
     clock = pygame.time.Clock()
     store = state.ReminderStore()
