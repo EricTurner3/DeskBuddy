@@ -21,9 +21,9 @@ def main():
     mood_change = pygame.mixer.Sound("sounds/focus_7.wav")
     mood_change.set_volume(0.5)
     movement = pygame.mixer.Sound("sounds/focus_12.wav")
-    movement.set_volume(0.25)
+    movement.set_volume(0.15)
     blink = pygame.mixer.Sound("sounds/shutter_dial.wav")
-    blink.set_volume(0.25)
+    blink.set_volume(0.15)
 
     # Screen settings
     screen_width = 1024   # Rotated width
@@ -46,7 +46,7 @@ def main():
     robo_eyes.setAutoblinker(True, interval=6, variation=7)
     robo_eyes.setIdleMode(True, interval=5, variation=5)
     robo_eyes.setCuriosity(True)
-    robo_eyes.setWidth(250,250)
+    robo_eyes.setWidth(220,220)
     robo_eyes.setHeight(300,300)
     robo_eyes.setSpacebetween(40)
     robo_eyes.setBorderradius(40, 40)
