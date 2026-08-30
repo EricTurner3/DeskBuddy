@@ -149,6 +149,7 @@ def main():
                     panel_state.open = not panel_state.open
                     panel_state.toggle_started = pygame.time.get_ticks()
                     ui_open.play()
+                    attention.focus("center-right")
                     if panel_state.open:
                         panel_state.reminders = store.list()
                 # handle click outside the panel to close it
@@ -156,6 +157,7 @@ def main():
                     if not panel_ui.get_panel_rect(screen_width, screen_height, panel_state.open, panel_state.toggle_started).collidepoint(event.pos):
                         panel_state.open = False
                         ui_close.play()
+                        attention.release()
                         panel_state.toggle_started = pygame.time.get_ticks()
                 # handle click on robo eyes to trigger wobble animation
                 elif robo_eyes.get_eyes_rect().collidepoint(event.pos):

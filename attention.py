@@ -10,6 +10,8 @@ LOCATION_FRACTIONS = {
     "top-right": (1.0, 0.0),
     "bottom-left": (0.0, 1.0),
     "bottom-right": (1.0, 1.0),
+    "center-right": (1.0, 0.5),
+    "center-left": (0.0, 0.5),
 }
 
 
