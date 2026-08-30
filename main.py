@@ -149,7 +149,7 @@ def main():
                     panel_state.open = not panel_state.open
                     panel_state.toggle_started = pygame.time.get_ticks()
                     ui_open.play()
-                    attention.focus("center-right")
+                    attention.focus("center-left")
                     if panel_state.open:
                         panel_state.reminders = store.list()
                 # handle click outside the panel to close it
