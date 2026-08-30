@@ -10,6 +10,42 @@ import attention as a
 import weather as w
 import status_bar
 import panel_ui
+import blurb_ui
+import robo_ui
+import actions
+
+def advance_toast_queue(toast_state, mood_state, robo_eyes, attention, base_mood, mood_change):
+    """Fires once the happy-period timer elapses after a completion: dismiss
+    the current toast, pop the next pending reminder if any, and update
+    mood/energy/attention accordingly. Pure state mutation, no drawing."""
+    if not (toast_state.active_reminder and toast_state.toast_completed
+            and pygame.time.get_ticks() >= toast_state.happy_until):
+        return
+
+    mood_state.set(base_mood, sound=mood_change)
+    toast_state.active_reminder = toast_state.pending_reminders.pop(0) if toast_state.pending_reminders else None
+    if toast_state.active_reminder:
+        toast_state.toast_started = pygame.time.get_ticks()
+        toast_state.toast_completed = False
+        robo_eyes.startDraining()
+        attention.focus("bottom-right")
+    else:
+        robo_eyes.stopDraining()
+        robo_eyes.gainEnergy()
+        if not toast_state.flash_toast:
+            attention.release()
+
+
+def expire_flash_toast(toast_state, attention):
+    """Fires once the flash toast's display duration elapses."""
+    if not toast_state.flash_toast:
+        return
+    elapsed = pygame.time.get_ticks() - toast_state.flash_started
+    if elapsed >= reminder_ui.FLASH_TOAST_DURATION_MS:
+        toast_state.flash_toast = None
+        if not toast_state.active_reminder:
+            attention.release()
+
 
 
 # Example usage within a Pygame application
@@ -25,6 +61,8 @@ def main():
     ui_open.set_volume(0.15)
     ui_close = pygame.mixer.Sound("sounds/ui_close.mp3")
     ui_close.set_volume(0.15)
+    blurb_tick = pygame.mixer.Sound("sounds/keyboard_7.wav")
+    blurb_tick.set_volume(0.12)
 
     # robo sounds
     mood_change = pygame.mixer.Sound("sounds/focus_7.wav")
@@ -102,10 +140,13 @@ def main():
     panel_title_font = pygame.font.Font(None, 26)
     panel_meta_font = pygame.font.Font(None, 20)
 
+    blurb_state = state.BlurbState()
+    blurb_font = pygame.font.Font(None, 22)
+
     # main game loop
     while True:
         '''
-        Events Handling
+        Event Handling — discrete triggers (pygame events, user input)
         '''
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -121,7 +162,7 @@ def main():
                     toast_state.toast_started = pygame.time.get_ticks()
                     toast_state.toast_completed = False
                     toast_due.play()
-                    mood_state.set("angry", sound=mood_change)
+                    robo_eyes.startDraining()
                     attention.focus("bottom-right")
                 else:
                     toast_state.pending_reminders.append(event.reminder)
@@ -140,7 +181,13 @@ def main():
                 completed_toast.play()
                 toast_state.happy_until = pygame.time.get_ticks() + 2500
                 mood_state.set("happy", sound=mood_change)
-                panel_state.reminders = store.list()
+                panel_state.reminders = store.list() # refresh the panel reminders list
+                robo_eyes.gainEnergy() # refill energy on completion of a reminder
+
+            if event.type == r.ROBO_TIER_DROPPED:
+                looking_right = attention.target_fraction and attention.target_fraction[0] >= 0.5
+                corner = "top-left" if looking_right else "top-right"
+                blurb_ui.start_blurb(blurb_state, corner=corner)
 
             # handle UI click
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -168,11 +215,8 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and toast_state.active_reminder and not toast_state.toast_completed:
                 checkmark_rect = reminder_ui.get_checkmark_rect(screen_width, screen_height)
                 if checkmark_rect.collidepoint(event.pos):
-                    result = reminder_ui.mark_reminder_complete(store, toast_state.active_reminder["id"], mood_state, sound=mood_change)
-                    completed_toast.play()
-                    panel_state.reminders = store.list()
-                    toast_state.toast_completed = result["toast_completed"]
-                    toast_state.happy_until = result["happy_until"]
+                    # post an REMINDER_COMPLETED event to handle the completion of the active reminder
+                    actions.complete_reminder(store, toast_state.active_reminder["id"])
 
             # handle mood change event
             if event.type == api.MOOD_CHANGED:
@@ -182,22 +226,23 @@ def main():
                     mood_state.set(base_mood, sound=mood_change)
 
         '''
-        Draw UI
+        State Transitions — timer-driven mutations (not tied to a discrete
+        pygame event, but not drawing either; runs once per frame)
         '''
-        # Update RoboEyes
+        advance_toast_queue(toast_state, mood_state, robo_eyes, attention, base_mood, mood_change)
+        expire_flash_toast(toast_state, attention)
+
+        '''
+        Update & Draw — no state mutation below this point, only system
+        ticks (robo_eyes/attention) and rendering
+        '''
         robo_eyes.update()
-        # Update AttentionController
         attention.update()
 
-        # Clear the window before blitting
         window.fill(r.BGCOLOR)
-
-        # Blit the draw surface onto the main window
         window.blit(draw_surface, (draw_surface.get_rect(center=window.get_rect().center)))
         status_bar.draw_status_bar(window, weather_state.get(), screen_width, screen_height, time_font, temp_font)
 
-
-        # Draw active reminder toast if any
         if toast_state.active_reminder:
             reminder_ui.draw_reminder_toast(
                 window,
@@ -209,36 +254,19 @@ def main():
                 toast_font,
                 toast_small_font,
             )
-            if toast_state.toast_completed and pygame.time.get_ticks() >= toast_state.happy_until:
-                mood_state.set(base_mood, sound=mood_change)
-                # this is what removes the active toast and moves on to the next reminder if there is one
-                toast_state.active_reminder = toast_state.pending_reminders.pop(0) if toast_state.pending_reminders else None
-                if toast_state.active_reminder:
-                    toast_state.toast_started = pygame.time.get_ticks()
-                    toast_state.toast_completed = False
-                    attention.focus("bottom-right")
-                elif not toast_state.flash_toast:
-                    attention.release()
 
-        # Draw flash toast if active
         if toast_state.flash_toast:
-            elapsed = pygame.time.get_ticks() - toast_state.flash_started
-            if elapsed >= reminder_ui.FLASH_TOAST_DURATION_MS:
-                toast_state.flash_toast = None
-                if not toast_state.active_reminder:
-                    attention.release()
-            else:
-                reminder_ui.draw_flash_toast(
-                    window,
-                    toast_state.flash_toast["title"],
-                    "New Reminder Scheduled",
-                    toast_state.flash_started,
-                    reminder_ui.FLASH_TOAST_DURATION_MS,
-                    screen_width,
-                    screen_height,
-                    toast_font,
-                    toast_small_font,
-                )
+            reminder_ui.draw_flash_toast(
+                window,
+                toast_state.flash_toast["title"],
+                "New Reminder Scheduled",
+                toast_state.flash_started,
+                reminder_ui.FLASH_TOAST_DURATION_MS,
+                screen_width,
+                screen_height,
+                toast_font,
+                toast_small_font,
+            )
 
         panel_ui.draw_reminder_panel(
             window, panel_state.reminders, screen_width, screen_height,
@@ -246,10 +274,12 @@ def main():
         )
         panel_ui.draw_panel_tab(window, screen_width, screen_height, panel_state.open)
 
-        # Update the display
-        pygame.display.flip()
+        robo_ui.draw_energy_bar(window, robo_eyes)
 
-        # Limit to 60 FPS
+        blurb_ui.update_blurb(blurb_state, char_sound=blurb_tick)
+        blurb_ui.draw_blurb(window, blurb_state, robo_eyes, screen_width, screen_height, blurb_font)
+
+        pygame.display.flip()
         clock.tick(60)
 
 if __name__ == "__main__":

@@ -27,9 +27,12 @@ SW = 6  # South-west, bottom left
 W = 7   # West, middle left
 NW = 8  # North-west, top left
 
+# events that roboeyes can post to the pygame event queue
+ROBO_TIER_DROPPED = pygame.event.custom_type() # pygame.USEREVENT + 3
+
 
 class RoboEyes:
-    def __init__(self, draw_surface, width=320, height=240, frame_rate=50):
+    def __init__(self, draw_surface, width=320, height=240, frame_rate=50, energy_tiers=4):
         """
         Initialize the RoboEyes class.
 
@@ -58,6 +61,15 @@ class RoboEyes:
         self.wobble_animation_timer = 0
         self.wobble_animation_duration = 400  # in milliseconds
         self.wobble_toggle = True
+
+        # Energy / Draining State
+        self.energy_tiers = max(1, energy_tiers)
+        self.energy = 1.0  # 1.0 = fully calm, 0.0 = fully drained (angry)
+        self.energy_drain_per_second = 0.05   # ~20s to fully drain
+        self.energy_gain_per_completion = 0.35
+        self._energy_draining = False
+        self._energy_last_tick = pygame.time.get_ticks()
+        self._energy_tier = self.energy_tiers
 
         # Eye Geometry
         self.space_between_default = 10  # Reduced space for larger eyes
@@ -276,6 +288,47 @@ class RoboEyes:
         self.vFlicker = flicker_bit
         self.vFlicker_amplitude = amplitude
 
+    # energy setters
+    def setEnergyTiers(self, tiers):
+        self.energy_tiers = max(1, tiers)
+        self._energy_tier = min(self._energy_tier, self.energy_tiers)
+
+    def setEnergyDrainRate(self, per_second):
+        self.energy_drain_per_second = per_second
+
+    def setEnergyGain(self, amount):
+        self.energy_gain_per_completion = amount
+
+    def startDraining(self):
+        self._energy_last_tick = pygame.time.get_ticks()
+        self._energy_draining = True
+
+    def stopDraining(self):
+        self._energy_draining = False
+
+    def gainEnergy(self, amount=None):
+        amount = self.energy_gain_per_completion if amount is None else amount
+        self.energy = min(1.0, self.energy + amount)
+
+    def getEnergyTier(self):
+        return self._energy_tier
+
+    def _update_energy(self, current_time):
+        if self._energy_draining:
+            dt = (current_time - self._energy_last_tick) / 1000.0
+            self.energy = max(0.0, self.energy - self.energy_drain_per_second * dt)
+        self._energy_last_tick = current_time
+
+        tier = min(self.energy_tiers, max(0, int(self.energy * self.energy_tiers)))
+        if tier < self._energy_tier:
+            pygame.event.post(pygame.event.Event(ROBO_TIER_DROPPED, tier=tier))
+        self._energy_tier = tier
+
+    @staticmethod
+    def _lerp_color(color_a, color_b, t):
+        t = max(0.0, min(1.0, t))
+        return tuple(int(a + (b - a) * t) for a, b in zip(color_a, color_b))
+
     # Getter Methods
     def getScreenConstraint_X(self):
         return self.screen_width - self.eyeLwidth_current - self.space_between_current - self.eyeRwidth_current
@@ -325,6 +378,7 @@ class RoboEyes:
     # Drawing Methods
     def drawEyes(self):
         current_time = pygame.time.get_ticks()
+        self._update_energy(current_time)
 
         # Pre-Calculations
         if self.curious:
@@ -475,6 +529,8 @@ class RoboEyes:
             self.draw_eye(self.eyeRx, self.eyeRy, self.eyeRwidth_current, self.eyeRheight_current,
                          self.eyeRborder_radius_current, self.eye_color)
 
+        drain_amount = 1.0 - self.energy  # 0 = calm, 1 = fully drained
+
         # Mood Transitions
         if self.tired:
             self.eyelids_tired_height_next = self.eyeLheight_current // 2
@@ -485,8 +541,13 @@ class RoboEyes:
         if self.angry:
             self.eyelids_angry_height_next = self.eyeLheight_current // 2
             self.eyelids_tired_height_next = 0
+        elif drain_amount > 0 and not self.happy and not self.tired:
+            self.eyelids_angry_height_next = int((self.eyeLheight_current // 2) * drain_amount)
         else:
             self.eyelids_angry_height_next = 0
+        # Update eye color based on energy drain
+        if not self.happy and not self.tired and not self.angry:
+            self.eye_color = self._lerp_color(COLOR[DEFAULT], COLOR[ANGRY], drain_amount)
 
         if self.happy:
             self.eyelids_happy_bottom_offset_next = self.eyeLheight_current // 2

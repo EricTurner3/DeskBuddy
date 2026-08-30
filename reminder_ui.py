@@ -1,11 +1,10 @@
 import pygame
 
-import roboeyes as r
-
 FLASH_TOAST_DURATION_MS = 4000
 TOAST_WIDTH = 440
 TOAST_HEIGHT = 100
 TOAST_MARGIN = 24
+
 
 # human readable location on screen
 def location(screen_width, screen_height,position, toast_width=TOAST_WIDTH, toast_height=TOAST_HEIGHT):
@@ -27,14 +26,6 @@ def get_checkmark_rect(screen_width, screen_height, toast_width=TOAST_WIDTH, toa
     return pygame.Rect(target_x + button_rect.x, target_y + button_rect.y,
                         button_rect.width, button_rect.height)
 
-
-def mark_reminder_complete(store, reminder_id, mood_state, sound=None):
-    store.complete(reminder_id)
-    mood_state.set("happy", sound=sound)
-    return {
-        "toast_completed": True,
-        "happy_until": pygame.time.get_ticks() + 2500,
-    }
 
 # persistent toast which remains on screen until the user clicks the checkmark
 def draw_reminder_toast(window, title, started, completed, screen_width, screen_height, toast_font, toast_small_font, toast_location="bottom-right"):

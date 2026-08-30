@@ -3,8 +3,6 @@ import sqlite3
 from helper import utc_now, next_due_at
 from dataclasses import dataclass, field
 import roboeyes as r
-import pygame
-from api import REMINDER_CREATED
 
 class MoodState:
     """Thread-safe mood state, shared between the API thread and the main loop.
@@ -112,17 +110,15 @@ class ReminderStore:
             )
 
         completed_reminder = self.get(reminder_id)
-
+        # for recurring reminders, create the next occurrence immediately after completing this one
+        next_reminder = None
         if row is not None:
             title, due_at, recurrence_seconds = row
             if recurrence_seconds:
                 next_due = next_due_at(due_at, recurrence_seconds)
                 next_reminder = self.create(title, next_due, recurrence_seconds)
-                # Reuse the flash-toast pathway for recurring re-spawns,
-                # same as a fresh API-created reminder.
-                pygame.event.post(pygame.event.Event(REMINDER_CREATED, reminder=next_reminder))
 
-        return completed_reminder
+        return completed_reminder, next_reminder
 
     def delete(self, reminder_id):
         """Delete a not-yet-completed reminder. For a recurring reminder, this
@@ -200,3 +196,12 @@ class PanelState:
     open: bool = False
     toggle_started: int = 0
     reminders: list = field(default_factory=list)
+
+@dataclass
+class BlurbState:
+    text: str = ""
+    corner: str = "top-left"
+    started: int = 0
+    revealed_chars: int = 0
+    finished_typing_at: int | None = None
+    active: bool = False

@@ -8,10 +8,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 from helper import utc_now, parse_due_at
 
-REMINDER_DUE = pygame.USEREVENT + 1
-REMINDER_COMPLETED = pygame.USEREVENT + 2
-MOOD_CHANGED = pygame.USEREVENT + 3
-REMINDER_CREATED = pygame.USEREVENT + 4
+from events import REMINDER_DUE, REMINDER_COMPLETED, MOOD_CHANGED, REMINDER_CREATED
+import actions
 
 class Router:
     """Minimal FastAPI-style router for BaseHTTPRequestHandler.
@@ -116,7 +114,7 @@ class APIHandler(BaseHTTPRequestHandler):
 
 @router.get("/reminders")
 def list_reminders(handler):
-    handler._send_json(200, handler.store.list())
+    handler._send_json(200, actions.list_reminders(handler.store))
 
 
 '''
@@ -128,26 +126,19 @@ def list_reminders(handler):
 @router.post("/reminders")
 def create_reminder(handler):
     payload = handler._read_json()
-    title = str(payload.get("title", "")).strip()
-    if not title:
-        raise ValueError("title is required")
-    if payload.get("delay_seconds") is not None:
-        due_at = (utc_now() + timedelta(seconds=float(payload["delay_seconds"]))).isoformat()
-    else:
-        due_at = parse_due_at(payload.get("due_at"))
-    recurrence_seconds = payload.get("recurrence_seconds")
-    if recurrence_seconds is not None:
-        recurrence_seconds = int(recurrence_seconds)
-        if recurrence_seconds <= 0:
-            raise ValueError("recurrence_seconds must be positive")
-    reminder = handler.store.create(title, due_at, recurrence_seconds)
-    pygame.event.post(pygame.event.Event(REMINDER_CREATED, reminder=reminder))
+    reminder = actions.create_reminder(
+        handler.store,
+        title=payload.get("title"),
+        due_at=payload.get("due_at"),
+        delay_seconds=payload.get("delay_seconds"),
+        recurrence_seconds=payload.get("recurrence_seconds"),
+    )
     handler._send_json(201, reminder)
 
 
 @router.delete("/reminders/{reminder_id}")
 def delete_reminder(handler, reminder_id):
-    deleted = handler.store.delete(int(reminder_id))
+    deleted = actions.delete_reminder(handler.store, int(reminder_id))
     if deleted:
         handler._send_json(200, {"deleted": True, "id": int(reminder_id)})
     else:
@@ -156,11 +147,10 @@ def delete_reminder(handler, reminder_id):
 
 @router.post("/reminders/{reminder_id}/complete")
 def complete_reminder(handler, reminder_id):
-    reminder = handler.store.complete(int(reminder_id))
+    reminder = actions.complete_reminder(handler.store, int(reminder_id))
     if reminder is None:
         handler._send_json(404, {"error": "reminder not found"})
     else:
-        pygame.event.post(pygame.event.Event(REMINDER_COMPLETED, reminder_id=reminder["id"]))
         handler._send_json(200, reminder)
 
 '''
@@ -170,10 +160,7 @@ def complete_reminder(handler, reminder_id):
 @router.post("/mood")
 def set_mood(handler):
     payload = handler._read_json()
-    mood = str(payload.get("mood", "")).strip().lower()
-    if mood not in handler.mood_state.MOOD_MAP:
-        raise ValueError(f"mood must be one of {sorted(handler.mood_state.MOOD_MAP)}")
-    pygame.event.post(pygame.event.Event(MOOD_CHANGED, mood=mood))
+    mood = actions.set_mood(payload.get("mood"), handler.mood_state.MOOD_MAP)
     handler._send_json(200, {"mood": mood})
 
 @router.get("/mood")
