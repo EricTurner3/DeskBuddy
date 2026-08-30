@@ -17,20 +17,26 @@ def main():
     pygame.init()
 
     pygame.mixer.init()  # Initialize the mixer module for sound playback
+    # ui sounds
     new_toast = pygame.mixer.Sound("sounds/new_toast.mp3") # for new reminder created event
     toast_due = pygame.mixer.Sound("sounds/reminder_due.mp3") # for reminder due event
     completed_toast = pygame.mixer.Sound("sounds/completed.mp3")
+    ui_open = pygame.mixer.Sound("sounds/ui_open.mp3")
+    ui_open.set_volume(0.15)
+    ui_close = pygame.mixer.Sound("sounds/ui_close.mp3")
+    ui_close.set_volume(0.15)
+
+    # robo sounds
     mood_change = pygame.mixer.Sound("sounds/focus_7.wav")
     mood_change.set_volume(0.5)
     movement = pygame.mixer.Sound("sounds/focus_12.wav")
     movement.set_volume(0.15)
     blink = pygame.mixer.Sound("sounds/shutter_dial.wav")
     blink.set_volume(0.15)
+    wobble = pygame.mixer.Sound("sounds/metal_wobble_25.wav")
+    wobble.set_volume(0.25)
 
-    ui_open = pygame.mixer.Sound("sounds/ui_open.mp3")
-    ui_open.set_volume(0.15)
-    ui_close = pygame.mixer.Sound("sounds/ui_close.mp3")
-    ui_close.set_volume(0.15)
+    
 
     # Screen settings
     screen_width = 1024   # Rotated width
@@ -136,21 +142,25 @@ def main():
                 mood_state.set("happy", sound=mood_change)
                 panel_state.reminders = store.list()
 
-            # handle click on the panel tab or outside the panel to toggle open/close
+            # handle UI click
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                tab_rect = panel_ui.get_tab_rect(screen_width, screen_height)
-                if tab_rect.collidepoint(event.pos):
+                # handle panel tab click
+                if not panel_state.open and panel_ui.get_tab_rect(screen_width, screen_height).collidepoint(event.pos):
                     panel_state.open = not panel_state.open
                     panel_state.toggle_started = pygame.time.get_ticks()
                     ui_open.play()
                     if panel_state.open:
                         panel_state.reminders = store.list()
+                # handle click outside the panel to close it
                 elif panel_state.open:
-                    panel_rect = panel_ui.get_panel_rect(screen_width, screen_height, panel_state.open, panel_state.toggle_started)
-                    if not panel_rect.collidepoint(event.pos):
+                    if not panel_ui.get_panel_rect(screen_width, screen_height, panel_state.open, panel_state.toggle_started).collidepoint(event.pos):
                         panel_state.open = False
                         ui_close.play()
                         panel_state.toggle_started = pygame.time.get_ticks()
+                # handle click on robo eyes to trigger wobble animation
+                elif robo_eyes.get_eyes_rect().collidepoint(event.pos):
+                    robo_eyes.anim_wobble()
+                    wobble.play()
 
             # handle mouse click on the checkmark button in the reminder toast
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and toast_state.active_reminder and not toast_state.toast_completed:

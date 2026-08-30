@@ -3,6 +3,7 @@ import random
 
 # Constants for colors
 BGCOLOR = (0, 0, 0)           # Black background
+# changes color based on mood
 COLOR = [
     (125, 249, 255),     # DEFAULT, Blue eyes
     (50, 249, 50),       # TIRED, yellow eyes
@@ -53,6 +54,10 @@ class RoboEyes:
         self.eyeL_open = False
         self.eyeR_open = False
         self.eye_color = COLOR[DEFAULT]
+        self.wobble = False
+        self.wobble_animation_timer = 0
+        self.wobble_animation_duration = 400  # in milliseconds
+        self.wobble_toggle = True
 
         # Eye Geometry
         self.space_between_default = 10  # Reduced space for larger eyes
@@ -278,6 +283,13 @@ class RoboEyes:
     def getScreenConstraint_Y(self):
         return self.screen_height - self.eyeLheight_default - self.bottom_padding
 
+    def get_eyes_rect(self):
+        left = self.eyeLx
+        top = min(self.eyeLy, self.eyeRy)
+        right = self.eyeRx + self.eyeRwidth_current
+        bottom = max(self.eyeLy + self.eyeLheight_current, self.eyeRy + self.eyeRheight_current)
+        return pygame.Rect(left, top, right - left, bottom - top)
+
     # Blinking Methods
     def close(self, left=True, right=True):
         if left:
@@ -306,6 +318,9 @@ class RoboEyes:
 
     def anim_laugh(self):
         self.laugh = True
+
+    def anim_wobble(self):
+        self.wobble = True
 
     # Drawing Methods
     def drawEyes(self):
@@ -399,6 +414,21 @@ class RoboEyes:
                 self.setHFlicker(False, 0)
                 self.confused_toggle = True
                 self.confused = False
+
+        # Wobble Animation (squint + shake)
+        if self.wobble:
+            if self.wobble_toggle:
+                self.setHFlicker(True, 12)
+                self.eyeLheight_next = self.eyeLheight_default // 2
+                self.eyeRheight_next = self.eyeRheight_default // 2
+                self.wobble_animation_timer = current_time
+                self.wobble_toggle = False
+            elif current_time >= self.wobble_animation_timer + self.wobble_animation_duration:
+                self.setHFlicker(False, 0)
+                self.eyeLheight_next = self.eyeLheight_default
+                self.eyeRheight_next = self.eyeRheight_default
+                self.wobble_toggle = True
+                self.wobble = False
 
         # Idle Animation
         if self.idle and (current_time >= self.idle_animation_timer):

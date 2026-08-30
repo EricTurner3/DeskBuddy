@@ -29,8 +29,9 @@ Desk Buddy is a python based application meant for raspberry pi with a touch scr
    # use this on linux with no desktop to spawn GUI just for this app
    xinit /usr/bin/python3 /opt/DeskBuddy/main.py
    ```
-
+4. For upgrading, load into the folder and run `git fetch --all && git reset --hard origin/main` to pull latest changes. This will discard any local changes you made!
 ---
+
 
 ## API Reference
 
