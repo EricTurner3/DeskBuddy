@@ -1,8 +1,8 @@
 import threading
 import sqlite3
-from helper import utc_now, next_due_at
+from utils.helper import utc_now, next_due_at
 from dataclasses import dataclass, field
-import roboeyes as r
+import ui.roboeyes as r
 
 class MoodState:
     """Thread-safe mood state, shared between the API thread and the main loop.

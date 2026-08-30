@@ -28,7 +28,7 @@ def get_checkmark_rect(screen_width, screen_height, toast_width=TOAST_WIDTH, toa
 
 
 # persistent toast which remains on screen until the user clicks the checkmark
-def draw_reminder_toast(window, title, started, completed, screen_width, screen_height, toast_font, toast_small_font, toast_location="bottom-right"):
+def draw_persistent_toast(window, title, started, completed, screen_width, screen_height, toast_font, toast_small_font, toast_location="bottom-right"):
     elapsed = pygame.time.get_ticks() - started
     progress = min(1.0, elapsed / 350.0)
     toast_width, toast_height = TOAST_WIDTH, TOAST_HEIGHT

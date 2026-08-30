@@ -10,7 +10,7 @@ Desk Buddy is a python based application meant for raspberry pi with a touch scr
 - an API to send reminders, or modify DeskBuddy's default mood
 - a status bar with current time and weather
 - sound effects for new notifications, or DeskBuddy's movements
-
+- energy bar for tracking outstanding due reminders and completion of reminders
 ---
 
 ## Installation

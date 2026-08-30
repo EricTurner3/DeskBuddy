@@ -6,10 +6,9 @@ import threading
 from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
-from helper import utc_now, parse_due_at
 
-from events import REMINDER_DUE, REMINDER_COMPLETED, MOOD_CHANGED, REMINDER_CREATED
-import actions
+from core.events import REMINDER_DUE, REMINDER_COMPLETED, MOOD_CHANGED, REMINDER_CREATED
+import core.actions as actions
 
 class Router:
     """Minimal FastAPI-style router for BaseHTTPRequestHandler.
@@ -167,17 +166,10 @@ def set_mood(handler):
 def get_mood(handler):
     handler._send_json(200, {"mood": handler.mood_state.get()})
 
-def run_reminder_api(store, mood_state, host="0.0.0.0", port=8765):
+def run_api(store, mood_state, host="0.0.0.0", port=8765):
     APIHandler.store = store # load the ReminderStore state so it can be referenced by other calls
     APIHandler.mood_state = mood_state # load the MoodState so it can be referenced by other calls
     server = ThreadingHTTPServer((host, port), APIHandler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print('* API Started on {}:{}'.format(host, port))
     return server
-
-
-def run_reminder_scheduler(store, stop_event):
-    while not stop_event.wait(1):
-        for reminder in store.due():
-            print('* Reminder Due: {}'.format(reminder))
-            pygame.event.post(pygame.event.Event(REMINDER_DUE, reminder=reminder))

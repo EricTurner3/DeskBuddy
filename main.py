@@ -1,18 +1,17 @@
-import panel_ui
 import pygame
 import threading
-import roboeyes as r
-import api
-import reminder_ui
+import core.api as api
 import sys
-import state
-import attention as a
-import weather as w
-import status_bar
-import panel_ui
-import blurb_ui
-import robo_ui
-import actions
+import core.state as state
+import core.actions as actions
+import core.attention as a
+import core.weather as w
+import ui.status_bar as status_bar
+import ui.panel as panel
+import ui.blurb as blurb
+import ui.robo as robo
+import ui.roboeyes as r
+import ui.toast as toast
 
 def advance_toast_queue(toast_state, mood_state, robo_eyes, attention, base_mood, mood_change):
     """Fires once the happy-period timer elapses after a completion: dismiss
@@ -41,7 +40,7 @@ def expire_flash_toast(toast_state, attention):
     if not toast_state.flash_toast:
         return
     elapsed = pygame.time.get_ticks() - toast_state.flash_started
-    if elapsed >= reminder_ui.FLASH_TOAST_DURATION_MS:
+    if elapsed >= toast.FLASH_TOAST_DURATION_MS:
         toast_state.flash_toast = None
         if not toast_state.active_reminder:
             attention.release()
@@ -110,10 +109,10 @@ def main():
 
     clock = pygame.time.Clock()
     store = state.ReminderStore()
-    api_server = api.run_reminder_api(store, mood_state)
+    api_server = api.run_api(store, mood_state)
     stop_scheduler = threading.Event()
     threading.Thread(
-        target=api.run_reminder_scheduler,
+        target=actions.run_reminder_scheduler,
         args=(store, stop_scheduler),
         daemon=True,
     ).start()
@@ -187,12 +186,12 @@ def main():
             if event.type == r.ROBO_TIER_DROPPED:
                 looking_right = attention.target_fraction and attention.target_fraction[0] >= 0.5
                 corner = "top-left" if looking_right else "top-right"
-                blurb_ui.start_blurb(blurb_state, corner=corner)
+                blurb.start_blurb(blurb_state, corner=corner)
 
             # handle UI click
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 # handle panel tab click
-                if not panel_state.open and panel_ui.get_tab_rect(screen_width, screen_height).collidepoint(event.pos):
+                if not panel_state.open and panel.get_tab_rect(screen_width, screen_height).collidepoint(event.pos):
                     panel_state.open = not panel_state.open
                     panel_state.toggle_started = pygame.time.get_ticks()
                     ui_open.play()
@@ -201,7 +200,7 @@ def main():
                         panel_state.reminders = store.list()
                 # handle click outside the panel to close it
                 elif panel_state.open:
-                    if not panel_ui.get_panel_rect(screen_width, screen_height, panel_state.open, panel_state.toggle_started).collidepoint(event.pos):
+                    if not panel.get_panel_rect(screen_width, screen_height, panel_state.open, panel_state.toggle_started).collidepoint(event.pos):
                         panel_state.open = False
                         ui_close.play()
                         attention.release()
@@ -213,7 +212,7 @@ def main():
 
             # handle mouse click on the checkmark button in the reminder toast
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and toast_state.active_reminder and not toast_state.toast_completed:
-                checkmark_rect = reminder_ui.get_checkmark_rect(screen_width, screen_height)
+                checkmark_rect = toast.get_checkmark_rect(screen_width, screen_height)
                 if checkmark_rect.collidepoint(event.pos):
                     # post an REMINDER_COMPLETED event to handle the completion of the active reminder
                     actions.complete_reminder(store, toast_state.active_reminder["id"])
@@ -244,7 +243,7 @@ def main():
         status_bar.draw_status_bar(window, weather_state.get(), screen_width, screen_height, time_font, temp_font)
 
         if toast_state.active_reminder:
-            reminder_ui.draw_reminder_toast(
+            toast.draw_persistent_toast(
                 window,
                 toast_state.active_reminder["title"],
                 toast_state.toast_started,
@@ -256,28 +255,28 @@ def main():
             )
 
         if toast_state.flash_toast:
-            reminder_ui.draw_flash_toast(
+            toast.draw_flash_toast(
                 window,
                 toast_state.flash_toast["title"],
                 "New Reminder Scheduled",
                 toast_state.flash_started,
-                reminder_ui.FLASH_TOAST_DURATION_MS,
+                toast.FLASH_TOAST_DURATION_MS,
                 screen_width,
                 screen_height,
                 toast_font,
                 toast_small_font,
             )
 
-        panel_ui.draw_reminder_panel(
+        panel.draw_reminder_panel(
             window, panel_state.reminders, screen_width, screen_height,
             panel_state.open, panel_state.toggle_started, panel_title_font, panel_meta_font,
         )
-        panel_ui.draw_panel_tab(window, screen_width, screen_height, panel_state.open)
+        panel.draw_panel_tab(window, screen_width, screen_height, panel_state.open)
 
-        robo_ui.draw_energy_bar(window, robo_eyes)
+        robo.draw_energy_bar(window, robo_eyes)
 
-        blurb_ui.update_blurb(blurb_state, char_sound=blurb_tick)
-        blurb_ui.draw_blurb(window, blurb_state, robo_eyes, screen_width, screen_height, blurb_font)
+        blurb.update_blurb(blurb_state, char_sound=blurb_tick)
+        blurb.draw_blurb(window, blurb_state, robo_eyes, screen_width, screen_height, blurb_font)
 
         pygame.display.flip()
         clock.tick(60)

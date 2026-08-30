@@ -12,8 +12,8 @@ robo_eyes directly, since those are main-thread-only.
 """
 import pygame
 from datetime import timedelta
-from helper import utc_now, parse_due_at
-import events as ev
+from utils.helper import utc_now, parse_due_at
+import core.events as ev
 
 def list_reminders(store):
     """Returns a list of all reminders, sorted by due_at ascending."""
@@ -56,6 +56,12 @@ def create_reminder(store, title, due_at=None, delay_seconds=None, recurrence_se
 def delete_reminder(store, reminder_id):
     """Cancels a not-yet-completed reminder. Returns True if something was deleted."""
     return store.delete(reminder_id)
+
+def run_reminder_scheduler(store, stop_event):
+    while not stop_event.wait(1):
+        for reminder in store.due():
+            print('* Reminder Due: {}'.format(reminder))
+            pygame.event.post(pygame.event.Event(ev.REMINDER_DUE, reminder=reminder))
 
 
 def set_mood(mood, valid_moods):

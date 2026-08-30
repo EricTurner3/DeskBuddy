@@ -1,5 +1,5 @@
 import pygame
-import helper
+import utils.helper as helper
 
 PANEL_WIDTH = 340
 TAB_WIDTH = 28
